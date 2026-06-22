@@ -1,3 +1,5 @@
+import Markdown from "./Markdown.jsx";
+
 // Right-hand panel of stacked action cards (newest first).
 export default function SidePanel({ cards }) {
   return (
@@ -17,7 +19,11 @@ export default function SidePanel({ cards }) {
             {c.status === "error" && (
               <div className="card-body error">⚠️ {c.error}</div>
             )}
-            {c.status === "done" && <div className="card-body">{c.text}</div>}
+            {c.status === "done" && (
+              <div className="card-body">
+                <Markdown>{c.text}</Markdown>
+              </div>
+            )}
           </div>
         ))}
       </div>

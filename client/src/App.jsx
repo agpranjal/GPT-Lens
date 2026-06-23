@@ -13,16 +13,20 @@ export default function App() {
   // Active selection inside an assistant message: { selectedText, sourceMessageText, rect }
   const [selection, setSelection] = useState(null);
 
-  // The action modal: null when closed, else { label, selectedText, status, text, error }
+  // The action modal: null when closed, else a navigable history stack:
+  //   { frames: [{ id, label, selectedText, status, text, error }], index }
+  // Each frame is one explanation; `index` is the frame currently shown.
   const [modal, setModal] = useState(null);
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
+  const modalRef = useRef(modal);
+  modalRef.current = modal;
 
   // AbortController for the in-flight chat stream, so it can be stopped.
   const abortRef = useRef(null);
 
-  // Detect a text selection that lands inside an assistant message.
+  // Detect a text selection inside an assistant message OR inside the modal body.
   useEffect(() => {
     function onMouseUp(e) {
       if (e.target.closest?.("[data-selection-popup]")) return; // ignore popup clicks
@@ -37,6 +41,19 @@ export default function App() {
         sel.anchorNode?.nodeType === 3
           ? sel.anchorNode.parentElement
           : sel.anchorNode;
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+
+      // Selection inside the modal: source is the explanation currently shown.
+      if (anchorEl?.closest?.("[data-modal-body]")) {
+        const m = modalRef.current;
+        if (m) {
+          const frame = m.frames[m.index];
+          setSelection({ selectedText: text, sourceMessageText: frame.text, rect });
+        }
+        return;
+      }
+
+      // Selection inside a chat assistant message.
       const msgEl = anchorEl?.closest?.("[data-message-id]");
       if (!msgEl) {
         setSelection(null);
@@ -48,7 +65,6 @@ export default function App() {
         setSelection(null);
         return;
       }
-      const rect = sel.getRangeAt(0).getBoundingClientRect();
       setSelection({ selectedText: text, sourceMessageText: source.content, rect });
     }
     document.addEventListener("mouseup", onMouseUp);
@@ -114,22 +130,53 @@ export default function App() {
     async ({ action, custom, label }) => {
       if (!selection) return;
       const { selectedText, sourceMessageText } = selection;
-      setModal({ label, selectedText, status: "loading", text: "", error: "" });
+      const frameId = ++nextId;
+      const frame = { id: frameId, label, selectedText, status: "loading", text: "", error: "" };
+
+      // Push a new frame. From the chat: start a fresh stack. From within the
+      // modal: append after the current frame, discarding any forward history.
+      setModal((m) => {
+        if (!m) return { frames: [frame], index: 0 };
+        const frames = [...m.frames.slice(0, m.index + 1), frame];
+        return { frames, index: frames.length - 1 };
+      });
       setSelection(null);
       window.getSelection()?.removeAllRanges();
+
+      // Patch the frame by id (merge static fields).
+      const patchFrame = (patch) =>
+        setModal((m) =>
+          m
+            ? { ...m, frames: m.frames.map((f) => (f.id === frameId ? { ...f, ...patch } : f)) }
+            : m
+        );
+
       try {
-        await streamAction({ action, custom, selectedText, sourceMessageText }, (chunk) => {
+        await streamAction({ action, custom, selectedText, sourceMessageText }, (chunk) =>
           setModal((m) =>
-            m ? { ...m, status: "streaming", text: m.text + chunk } : m
-          );
-        });
-        setModal((m) => (m ? { ...m, status: "done" } : m));
+            m
+              ? {
+                  ...m,
+                  frames: m.frames.map((f) =>
+                    f.id === frameId
+                      ? { ...f, status: "streaming", text: f.text + chunk }
+                      : f
+                  ),
+                }
+              : m
+          )
+        );
+        patchFrame({ status: "done" });
       } catch (err) {
-        setModal((m) => (m ? { ...m, status: "error", error: err.message } : m));
+        patchFrame({ status: "error", error: err.message });
       }
     },
     [selection]
   );
+
+  const handleNavigate = useCallback((index) => {
+    setModal((m) => (m ? { ...m, index } : m));
+  }, []);
 
   return (
     <div className="app">
@@ -144,7 +191,9 @@ export default function App() {
         onStop={handleStop}
       />
       {selection && <SelectionPopup rect={selection.rect} onAction={handleAction} />}
-      {modal && <ActionModal modal={modal} onClose={() => setModal(null)} />}
+      {modal && (
+        <ActionModal modal={modal} onClose={() => setModal(null)} onNavigate={handleNavigate} />
+      )}
     </div>
   );
 }

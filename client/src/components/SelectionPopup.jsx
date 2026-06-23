@@ -13,6 +13,7 @@ const BUTTONS = [
 // Floating toolbar anchored above the current selection rect.
 export default function SelectionPopup({ rect, onAction }) {
   const ref = useRef(null);
+  const inputRef = useRef(null);
   const [pos, setPos] = useState({ top: 0, left: 0, ready: false });
   const [custom, setCustom] = useState("");
 
@@ -57,8 +58,15 @@ export default function SelectionPopup({ rect, onAction }) {
       </div>
       <form className="popup-custom" onSubmit={submitCustom}>
         <input
+          ref={inputRef}
           value={custom}
           onChange={(e) => setCustom(e.target.value)}
+          onMouseDown={(e) => {
+            // Don't let the click collapse the page selection; focus manually
+            // so the highlighted text stays visible while you type.
+            e.preventDefault();
+            inputRef.current?.focus();
+          }}
           placeholder="ask your own…"
         />
         <button type="submit" disabled={!custom.trim()}>

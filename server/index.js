@@ -15,6 +15,8 @@ async function pipeStream(res, stream) {
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("X-Accel-Buffering", "no"); // disable proxy buffering
+  // If the client disconnects (e.g. Stop pressed), abort the upstream request.
+  res.on("close", () => stream.abort?.());
   for await (const event of stream) {
     if (
       event.type === "content_block_delta" &&

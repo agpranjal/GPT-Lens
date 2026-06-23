@@ -126,6 +126,10 @@ body {
   font-weight: 600;
 }
 .composer button:disabled { opacity: 0.35; cursor: default; }
+.composer .stop-btn {
+  background: #c84b4b;
+  color: #fff;
+}
 
 /* ---- streaming caret ---- */
 .caret {

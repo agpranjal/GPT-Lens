@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Message from "./Message.jsx";
 
-export default function ChatView({ messages, loading, onSend }) {
+export default function ChatView({ messages, loading, onSend, onStop }) {
   const [input, setInput] = useState("");
   const endRef = useRef(null);
 
@@ -23,7 +23,7 @@ export default function ChatView({ messages, loading, onSend }) {
     <div className="chat-view">
       <div className="messages">
         {messages.length === 0 && (
-          <div className="empty">Ask Gemini anything to get started.</div>
+          <div className="empty">Hey!</div>
         )}
         {messages.map((m) => (
           <Message key={m.id} message={m} />
@@ -40,9 +40,15 @@ export default function ChatView({ messages, loading, onSend }) {
           placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
           rows={1}
         />
-        <button type="submit" disabled={loading || !input.trim()}>
-          Send
-        </button>
+        {loading ? (
+          <button type="button" className="stop-btn" onClick={onStop}>
+            Stop
+          </button>
+        ) : (
+          <button type="submit" disabled={!input.trim()}>
+            Send
+          </button>
+        )}
       </form>
     </div>
   );

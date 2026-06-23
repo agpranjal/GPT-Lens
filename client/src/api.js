@@ -1,9 +1,11 @@
 // Read a streaming text response, invoking onChunk(text) as chunks arrive.
-async function stream(url, body, onChunk) {
+// Pass an AbortSignal to allow cancelling mid-stream.
+async function stream(url, body, onChunk, signal) {
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
+    signal,
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -20,15 +22,16 @@ async function stream(url, body, onChunk) {
 }
 
 // messages: [{ role: "user" | "assistant", content }]
-export function streamChat(messages, onChunk) {
-  return stream("/api/chat", { messages }, onChunk);
+export function streamChat(messages, onChunk, signal) {
+  return stream("/api/chat", { messages }, onChunk, signal);
 }
 
 // action: key string; custom: optional free-text instruction
-export function streamAction({ action, custom, selectedText, sourceMessageText }, onChunk) {
+export function streamAction({ action, custom, selectedText, sourceMessageText }, onChunk, signal) {
   return stream(
     "/api/action",
     { action, custom, selectedText, sourceMessageText },
-    onChunk
+    onChunk,
+    signal
   );
 }

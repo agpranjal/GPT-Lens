@@ -19,6 +19,9 @@ export default function App() {
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
+  // AbortController for the in-flight chat stream, so it can be stopped.
+  const abortRef = useRef(null);
+
   // Detect a text selection that lands inside an assistant message.
   useEffect(() => {
     function onMouseUp(e) {
@@ -66,23 +69,45 @@ export default function App() {
       role,
       content,
     }));
+    const controller = new AbortController();
+    abortRef.current = controller;
     try {
-      await streamChat(history, (chunk) => {
+      await streamChat(
+        history,
+        (chunk) => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: m.content + chunk } : m
+            )
+          );
+        },
+        controller.signal
+      );
+    } catch (err) {
+      if (err.name === "AbortError") {
+        // Keep whatever streamed so far; mark an empty reply as stopped.
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === assistantId ? { ...m, content: m.content + chunk } : m
+            m.id === assistantId && m.content === ""
+              ? { ...m, content: "*(stopped)*" }
+              : m
           )
         );
-      });
-    } catch (err) {
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === assistantId ? { ...m, content: `⚠️ ${err.message}` } : m
-        )
-      );
+      } else {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: `⚠️ ${err.message}` } : m
+          )
+        );
+      }
     } finally {
       setChatLoading(false);
+      abortRef.current = null;
     }
+  }, []);
+
+  const handleStop = useCallback(() => {
+    abortRef.current?.abort();
   }, []);
 
   const handleAction = useCallback(
@@ -112,7 +137,12 @@ export default function App() {
         <h1>learnmaxx</h1>
         <span className="hint">highlight any part of a reply to ask about it →</span>
       </header>
-      <ChatView messages={messages} loading={chatLoading} onSend={handleSend} />
+      <ChatView
+        messages={messages}
+        loading={chatLoading}
+        onSend={handleSend}
+        onStop={handleStop}
+      />
       {selection && <SelectionPopup rect={selection.rect} onAction={handleAction} />}
       {modal && <ActionModal modal={modal} onClose={() => setModal(null)} />}
     </div>

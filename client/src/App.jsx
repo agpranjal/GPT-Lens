@@ -109,7 +109,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>select-to-ask</h1>
+        <h1>learnmaxx</h1>
         <span className="hint">highlight any part of a reply to ask about it →</span>
       </header>
       <ChatView messages={messages} loading={chatLoading} onSend={handleSend} />

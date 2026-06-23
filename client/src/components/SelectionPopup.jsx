@@ -4,6 +4,9 @@ const BUTTONS = [
   { action: "Explain better", label: "Explain better" },
   { action: "Give an example", label: "Give an example" },
   { action: "Simplify", label: "Simplify" },
+  { action: "Go deeper", label: "Go deeper" },
+  { action: "Show code", label: "Show code" },
+  { action: "Step by step", label: "Step by step" },
   { action: "wtf is this", label: "wtf is this" },
 ];
 
@@ -42,9 +45,10 @@ export default function SelectionPopup({ rect, onAction }) {
         left: pos.left,
         visibility: pos.ready ? "visible" : "hidden",
       }}
-      onMouseDown={(e) => e.preventDefault()} // keep the text selection alive
     >
-      <div className="popup-buttons">
+      {/* preventDefault on the buttons keeps the highlight from flickering when
+          clicked; the custom input is left free so it can receive focus. */}
+      <div className="popup-buttons" onMouseDown={(e) => e.preventDefault()}>
         {BUTTONS.map((b) => (
           <button key={b.action} onClick={() => onAction(b)}>
             {b.label}

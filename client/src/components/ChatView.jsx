@@ -5,9 +5,11 @@ export default function ChatView({ messages, loading, onSend }) {
   const [input, setInput] = useState("");
   const endRef = useRef(null);
 
+  // Scroll to the bottom only when a new message is added (e.g. you send one),
+  // not on every streamed chunk — so the view stays put while a reply streams in.
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  }, [messages.length]);
 
   function submit(e) {
     e.preventDefault();

@@ -12,26 +12,18 @@ function client() {
   return ai;
 }
 
-// Multi-turn chat. `messages` is [{ role: "user" | "assistant", content }].
+// Multi-turn chat, streamed. `messages` is [{ role: "user" | "assistant", content }].
 // Gemini expects roles "user" / "model", so we map "assistant" -> "model".
-export async function chat(messages) {
+// Returns an async iterable of chunks (each chunk has a `.text`).
+export function chatStream(messages) {
   const contents = messages.map((m) => ({
     role: m.role === "assistant" ? "model" : "user",
     parts: [{ text: m.content }],
   }));
-
-  const res = await client().models.generateContent({
-    model: MODEL,
-    contents,
-  });
-  return res.text;
+  return client().models.generateContentStream({ model: MODEL, contents });
 }
 
-// One-shot generation from a single prompt string (used by selection actions).
-export async function generate(prompt) {
-  const res = await client().models.generateContent({
-    model: MODEL,
-    contents: prompt,
-  });
-  return res.text;
+// One-shot generation from a single prompt string, streamed (used by selection actions).
+export function generateStream(prompt) {
+  return client().models.generateContentStream({ model: MODEL, contents: prompt });
 }

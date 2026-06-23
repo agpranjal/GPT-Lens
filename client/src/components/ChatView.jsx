@@ -26,7 +26,6 @@ export default function ChatView({ messages, loading, onSend }) {
         {messages.map((m) => (
           <Message key={m.id} message={m} />
         ))}
-        {loading && <div className="message assistant thinking">thinking…</div>}
         <div ref={endRef} />
       </div>
       <form className="composer" onSubmit={submit}>

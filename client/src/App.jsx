@@ -1,26 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ChatView from "./components/ChatView.jsx";
-import SidePanel from "./components/SidePanel.jsx";
 import SelectionPopup from "./components/SelectionPopup.jsx";
-import { sendChat, sendAction } from "./api.js";
+import ActionModal from "./components/ActionModal.jsx";
+import { streamChat, streamAction } from "./api.js";
 
-let cardId = 0;
+let nextId = 0;
 
 export default function App() {
   const [messages, setMessages] = useState([]); // { id, role, content }
   const [chatLoading, setChatLoading] = useState(false);
-  const [cards, setCards] = useState([]); // { id, action, selectedText, status, text, error }
 
   // Active selection inside an assistant message: { selectedText, sourceMessageText, rect }
   const [selection, setSelection] = useState(null);
+
+  // The action modal: null when closed, else { label, selectedText, status, text, error }
+  const [modal, setModal] = useState(null);
+
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
   // Detect a text selection that lands inside an assistant message.
   useEffect(() => {
     function onMouseUp(e) {
-      // Ignore clicks inside the popup itself.
-      if (e.target.closest?.("[data-selection-popup]")) return;
+      if (e.target.closest?.("[data-selection-popup]")) return; // ignore popup clicks
 
       const sel = window.getSelection();
       const text = sel?.toString().trim();
@@ -44,34 +46,40 @@ export default function App() {
         return;
       }
       const rect = sel.getRangeAt(0).getBoundingClientRect();
-      setSelection({
-        selectedText: text,
-        sourceMessageText: source.content,
-        rect,
-      });
+      setSelection({ selectedText: text, sourceMessageText: source.content, rect });
     }
     document.addEventListener("mouseup", onMouseUp);
     return () => document.removeEventListener("mouseup", onMouseUp);
   }, []);
 
   const handleSend = useCallback(async (prompt) => {
-    const userMsg = { id: ++cardId, role: "user", content: prompt };
-    const history = [...messagesRef.current, userMsg];
-    setMessages(history);
+    const userMsg = { id: ++nextId, role: "user", content: prompt };
+    const assistantId = ++nextId;
+    setMessages((prev) => [
+      ...prev,
+      userMsg,
+      { id: assistantId, role: "assistant", content: "" },
+    ]);
     setChatLoading(true);
+
+    const history = [...messagesRef.current, userMsg].map(({ role, content }) => ({
+      role,
+      content,
+    }));
     try {
-      const { text } = await sendChat(
-        history.map(({ role, content }) => ({ role, content }))
-      );
-      setMessages((prev) => [
-        ...prev,
-        { id: ++cardId, role: "assistant", content: text },
-      ]);
+      await streamChat(history, (chunk) => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId ? { ...m, content: m.content + chunk } : m
+          )
+        );
+      });
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { id: ++cardId, role: "assistant", content: `⚠️ ${err.message}` },
-      ]);
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId ? { ...m, content: `⚠️ ${err.message}` } : m
+        )
+      );
     } finally {
       setChatLoading(false);
     }
@@ -81,29 +89,18 @@ export default function App() {
     async ({ action, custom, label }) => {
       if (!selection) return;
       const { selectedText, sourceMessageText } = selection;
-      const id = ++cardId;
-      setCards((prev) => [
-        { id, action: label, selectedText, status: "loading", text: "" },
-        ...prev,
-      ]);
+      setModal({ label, selectedText, status: "loading", text: "", error: "" });
       setSelection(null);
       window.getSelection()?.removeAllRanges();
       try {
-        const { text } = await sendAction({
-          action,
-          custom,
-          selectedText,
-          sourceMessageText,
+        await streamAction({ action, custom, selectedText, sourceMessageText }, (chunk) => {
+          setModal((m) =>
+            m ? { ...m, status: "streaming", text: m.text + chunk } : m
+          );
         });
-        setCards((prev) =>
-          prev.map((c) => (c.id === id ? { ...c, status: "done", text } : c))
-        );
+        setModal((m) => (m ? { ...m, status: "done" } : m));
       } catch (err) {
-        setCards((prev) =>
-          prev.map((c) =>
-            c.id === id ? { ...c, status: "error", error: err.message } : c
-          )
-        );
+        setModal((m) => (m ? { ...m, status: "error", error: err.message } : m));
       }
     },
     [selection]
@@ -111,23 +108,13 @@ export default function App() {
 
   return (
     <div className="app">
-      <main className="chat-pane">
-        <header className="app-header">
-          <h1>select-to-ask</h1>
-          <span className="hint">
-            highlight any part of a reply to ask about it →
-          </span>
-        </header>
-        <ChatView
-          messages={messages}
-          loading={chatLoading}
-          onSend={handleSend}
-        />
-      </main>
-      <SidePanel cards={cards} />
-      {selection && (
-        <SelectionPopup rect={selection.rect} onAction={handleAction} />
-      )}
+      <header className="app-header">
+        <h1>select-to-ask</h1>
+        <span className="hint">highlight any part of a reply to ask about it →</span>
+      </header>
+      <ChatView messages={messages} loading={chatLoading} onSend={handleSend} />
+      {selection && <SelectionPopup rect={selection.rect} onAction={handleAction} />}
+      {modal && <ActionModal modal={modal} onClose={() => setModal(null)} />}
     </div>
   );
 }

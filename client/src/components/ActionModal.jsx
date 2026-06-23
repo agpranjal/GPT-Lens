@@ -8,9 +8,10 @@ function crumbLabel(text) {
 
 // Modal showing a navigable stack of selection-action explanations.
 // Highlighting text inside the body and picking an action pushes a new frame.
-export default function ActionModal({ modal, onClose, onNavigate }) {
+export default function ActionModal({ modal, onClose, onNavigate, onStop }) {
   const { frames, index } = modal;
   const current = frames[index];
+  const streaming = current.status === "loading" || current.status === "streaming";
 
   // Close on Escape.
   useEffect(() => {
@@ -39,21 +40,36 @@ export default function ActionModal({ modal, onClose, onNavigate }) {
               </span>
             ))}
           </nav>
-          <button className="modal-close" onClick={onClose} aria-label="Close">
-            ✕
-          </button>
+          <div className="modal-actions">
+            {streaming && (
+              <button className="modal-stop" onClick={onStop}>
+                Stop
+              </button>
+            )}
+            <button className="modal-close" onClick={onClose} aria-label="Close">
+              ✕
+            </button>
+          </div>
         </header>
 
-        <div className="modal-label">{current.label}</div>
-        <blockquote className="modal-snippet">{current.selectedText}</blockquote>
+        <div className="modal-content">
+          <div className="modal-meta">
+            <span className="modal-label">{current.label}</span>
+            <blockquote className="modal-snippet">{current.selectedText}</blockquote>
+          </div>
 
-        <div className="modal-body" data-modal-body>
-          {current.status === "loading" && <div className="muted">thinking…</div>}
-          {current.status === "error" && <div className="error">⚠️ {current.error}</div>}
-          {(current.status === "streaming" || current.status === "done") && (
-            <Markdown>{current.text || ""}</Markdown>
-          )}
-          {current.status === "streaming" && <span className="caret">▍</span>}
+          <div className="modal-body" data-modal-body>
+            {current.status === "loading" && (
+              <div className="muted">thinking…</div>
+            )}
+            {current.status === "error" && (
+              <div className="error">⚠️ {current.error}</div>
+            )}
+            {(current.status === "streaming" || current.status === "done") && (
+              <Markdown>{current.text || ""}</Markdown>
+            )}
+            {current.status === "streaming" && <span className="caret">▍</span>}
+          </div>
         </div>
       </div>
     </div>

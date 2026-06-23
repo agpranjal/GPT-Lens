@@ -23,8 +23,9 @@ export default function App() {
   const modalRef = useRef(modal);
   modalRef.current = modal;
 
-  // AbortController for the in-flight chat stream, so it can be stopped.
+  // AbortControllers for the in-flight chat stream and modal-action stream.
   const abortRef = useRef(null);
+  const actionAbortRef = useRef(null);
 
   // Detect a text selection inside an assistant message OR inside the modal body.
   useEffect(() => {
@@ -151,24 +152,51 @@ export default function App() {
             : m
         );
 
+      const controller = new AbortController();
+      actionAbortRef.current = controller;
       try {
-        await streamAction({ action, custom, selectedText, sourceMessageText }, (chunk) =>
+        await streamAction(
+          { action, custom, selectedText, sourceMessageText },
+          (chunk) =>
+            setModal((m) =>
+              m
+                ? {
+                    ...m,
+                    frames: m.frames.map((f) =>
+                      f.id === frameId
+                        ? { ...f, status: "streaming", text: f.text + chunk }
+                        : f
+                    ),
+                  }
+                : m
+            ),
+          controller.signal
+        );
+        patchFrame({ status: "done" });
+      } catch (err) {
+        if (err.name === "AbortError") {
+          // Keep partial text; mark an empty frame as stopped.
           setModal((m) =>
             m
               ? {
                   ...m,
                   frames: m.frames.map((f) =>
                     f.id === frameId
-                      ? { ...f, status: "streaming", text: f.text + chunk }
+                      ? {
+                          ...f,
+                          status: "done",
+                          text: f.text || "*(stopped)*",
+                        }
                       : f
                   ),
                 }
               : m
-          )
-        );
-        patchFrame({ status: "done" });
-      } catch (err) {
-        patchFrame({ status: "error", error: err.message });
+          );
+        } else {
+          patchFrame({ status: "error", error: err.message });
+        }
+      } finally {
+        if (actionAbortRef.current === controller) actionAbortRef.current = null;
       }
     },
     [selection]
@@ -176,6 +204,15 @@ export default function App() {
 
   const handleNavigate = useCallback((index) => {
     setModal((m) => (m ? { ...m, index } : m));
+  }, []);
+
+  const handleStopAction = useCallback(() => {
+    actionAbortRef.current?.abort();
+  }, []);
+
+  const handleCloseModal = useCallback(() => {
+    actionAbortRef.current?.abort();
+    setModal(null);
   }, []);
 
   return (
@@ -192,7 +229,12 @@ export default function App() {
       />
       {selection && <SelectionPopup rect={selection.rect} onAction={handleAction} />}
       {modal && (
-        <ActionModal modal={modal} onClose={() => setModal(null)} onNavigate={handleNavigate} />
+        <ActionModal
+          modal={modal}
+          onClose={handleCloseModal}
+          onNavigate={handleNavigate}
+          onStop={handleStopAction}
+        />
       )}
     </div>
   );

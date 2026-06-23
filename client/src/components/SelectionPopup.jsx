@@ -1,10 +1,10 @@
 import { useLayoutEffect, useRef, useState } from "react";
 
 const BUTTONS = [
-  { action: "explain", label: "Explain better" },
-  { action: "example", label: "Give an example" },
-  { action: "simplify", label: "Simplify" },
-  { action: "wtf", label: "wtf is this" },
+  { action: "Explain better", label: "Explain better" },
+  { action: "Give an example", label: "Give an example" },
+  { action: "Simplify", label: "Simplify" },
+  { action: "wtf is this", label: "wtf is this" },
 ];
 
 // Floating toolbar anchored above the current selection rect.

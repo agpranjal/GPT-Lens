@@ -3,7 +3,8 @@ import Anthropic from "@anthropic-ai/sdk";
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-6";
 
 // Applied to every request (chat + actions).
-const SYSTEM = "Do not use analogies, metaphors, or comparisons in your answers. Explain things directly.";
+// const SYSTEM = "Do not use analogies, metaphors, or comparisons in your answers. Explain things directly.";
+const SYSTEM = "Do not use analogies in your answers.";
 
 let client;
 function anthropic() {

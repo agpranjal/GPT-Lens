@@ -4,6 +4,12 @@ import Message from "./Message.jsx";
 export default function ChatView({ messages, loading, onSend, onStop }) {
   const [input, setInput] = useState("");
   const endRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // Focus the message box when the app opens, so you can type right away.
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
   // Scroll to the bottom only when a new message is added (e.g. you send one),
   // not on every streamed chunk — so the view stays put while a reply streams in.
@@ -17,13 +23,14 @@ export default function ChatView({ messages, loading, onSend, onStop }) {
     if (!text || loading) return;
     onSend(text);
     setInput("");
+    inputRef.current?.focus(); // keep focus for the next message
   }
 
   return (
     <div className="chat-view">
       <div className="messages">
         {messages.length === 0 && (
-          <div className="empty">Hey!</div>
+          <div className="empty">Hey !</div>
         )}
         {messages.map((m) => (
           <Message key={m.id} message={m} />
@@ -32,6 +39,7 @@ export default function ChatView({ messages, loading, onSend, onStop }) {
       </div>
       <form className="composer" onSubmit={submit}>
         <textarea
+          ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {

@@ -2,6 +2,9 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const MODEL = process.env.CLAUDE_MODEL || "claude-sonnet-4-6";
 
+// Applied to every request (chat + actions).
+const SYSTEM = "Do not use analogies, metaphors, or comparisons in your answers. Explain things directly.";
+
 let client;
 function anthropic() {
   if (!client) {
@@ -19,6 +22,7 @@ export function chatStream(messages) {
   return anthropic().messages.stream({
     model: MODEL,
     max_tokens: 8192,
+    system: SYSTEM,
     messages: messages.map((m) => ({
       role: m.role === "assistant" ? "assistant" : "user",
       content: m.content,
@@ -31,6 +35,7 @@ export function generateStream(prompt) {
   return anthropic().messages.stream({
     model: MODEL,
     max_tokens: 8192,
+    system: SYSTEM,
     messages: [{ role: "user", content: prompt }],
   });
 }

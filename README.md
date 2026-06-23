@@ -1,13 +1,14 @@
-# select-to-ask
+# learnmaxx
 
-A chat app (prompt → Gemini → response) with a **selection-driven follow-up layer**:
-highlight any part of a response, pick an action ("explain better", "give an example",
-"wtf is this", or type your own), and the answer appears as a card in a side panel.
+A ChatGPT-style chat app (prompt → Claude → streamed response) with a
+**selection-driven follow-up layer**: highlight any part of a reply, pick an
+action ("Explain better", "Give an example", "Simplify", "wtf is this", or type
+your own), and the answer streams into a modal.
 
 ## Stack
 - **Client:** React + Vite
 - **Server:** Node + Express (stateless)
-- **LLM:** Google Gemini via `@google/genai` (default model `gemini-2.5-flash`)
+- **LLM:** Anthropic Claude via `@anthropic-ai/sdk` (default model `claude-sonnet-4-6`)
 
 ## Setup
 
@@ -19,7 +20,7 @@ Create `server/.env` from the example and add your key:
 
 ```bash
 cp server/.env.example server/.env
-# then edit server/.env and set GEMINI_API_KEY=...
+# then edit server/.env and set ANTHROPIC_API_KEY=...
 ```
 
 ## Run (dev)
@@ -34,8 +35,10 @@ npm run dev
 
 ## How it works
 
-- `POST /api/chat`  — `{ messages: [{role, content}] }` → `{ text }`
-- `POST /api/action` — `{ action, selectedText, sourceMessageText, custom? }` → `{ text }`
+Both endpoints stream plain-text chunks back to the client:
 
-The Gemini API key lives only on the server and is never exposed to the client.
-Action wording (the instruction each button maps to) lives in `server/prompts.js`.
+- `POST /api/chat`  — `{ messages: [{role, content}] }` → streamed text
+- `POST /api/action` — `{ action, selectedText, sourceMessageText, custom? }` → streamed text
+
+The Anthropic API key lives only on the server and is never exposed to the client.
+Selection-action prompts are assembled in `server/prompts.js`.

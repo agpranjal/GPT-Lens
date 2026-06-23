@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { chatStream, generateStream } from "./gemini.js";
+import { chatStream, generateStream } from "./claude.js";
 import { buildActionPrompt, resolveInstruction } from "./prompts.js";
 
 const app = express();
@@ -10,13 +10,18 @@ app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-// Pipe a Gemini text stream to the HTTP response as plain-text chunks.
+// Pipe an Anthropic message stream to the HTTP response as plain-text chunks.
 async function pipeStream(res, stream) {
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("X-Accel-Buffering", "no"); // disable proxy buffering
-  for await (const chunk of stream) {
-    if (chunk.text) res.write(chunk.text);
+  for await (const event of stream) {
+    if (
+      event.type === "content_block_delta" &&
+      event.delta.type === "text_delta"
+    ) {
+      res.write(event.delta.text);
+    }
   }
   res.end();
 }
@@ -35,7 +40,7 @@ app.post("/api/chat", async (req, res) => {
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: "messages must be a non-empty array" });
     }
-    await pipeStream(res, await chatStream(messages));
+    await pipeStream(res, chatStream(messages));
   } catch (err) {
     handleStreamError(res, err, "/api/chat");
   }
@@ -52,7 +57,7 @@ app.post("/api/action", async (req, res) => {
     }
     const instruction = resolveInstruction({ action, custom });
     const prompt = buildActionPrompt({ sourceMessageText, selectedText, instruction });
-    await pipeStream(res, await generateStream(prompt));
+    await pipeStream(res, generateStream(prompt));
   } catch (err) {
     handleStreamError(res, err, "/api/action");
   }

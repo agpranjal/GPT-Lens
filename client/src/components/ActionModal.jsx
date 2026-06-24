@@ -40,8 +40,8 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
   // The "Questions" chip is pinned to the front (never reordered by MRU).
   const questionsChip = {
     key: QUESTIONS_KEY,
-    display: "?",
-    title: "Suggested questions",
+    display: "✨ ?",
+    title: "Suggested questions (AI)",
     payload: { questions: true, label: "Questions" },
     generated: !!frame.variants[QUESTIONS_KEY],
     special: true,

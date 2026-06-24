@@ -43,10 +43,10 @@ export default function SelectionPopup({ rect, onAction }) {
       <div className="popup-buttons" onMouseDown={(e) => e.preventDefault()}>
         <button
           className="popup-special"
-          title="Suggested questions"
+          title="Suggested questions (AI)"
           onClick={() => onAction({ questions: true, label: "Questions" })}
         >
-          ?
+          ✨ ?
         </button>
         {ACTIONS.map((b) => (
           <button key={b.action} onClick={() => onAction(b)}>

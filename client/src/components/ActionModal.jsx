@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Markdown from "./Markdown.jsx";
+import Dots from "./Dots.jsx";
 import { ACTIONS } from "../actions.js";
 
 function shorten(text, n = 28) {
@@ -17,14 +18,21 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
   const streaming = current.status === "loading" || current.status === "streaming";
   const [custom, setCustom] = useState("");
 
-  // Close on Escape.
+  // Escape closes; ←/→ move between frames (unless typing in the chip input).
   useEffect(() => {
     function onKey(e) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      const tag = e.target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (e.key === "ArrowLeft" && index > 0) onNavigate(index - 1);
+      else if (e.key === "ArrowRight" && index < frames.length - 1) onNavigate(index + 1);
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, onNavigate, index, frames.length]);
 
   // Custom variants created on this frame (in creation order), for chips.
   const customKeys = frame.order.filter((k) => frame.variants[k]?.kind === "custom");
@@ -126,14 +134,13 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
           </div>
 
           <div className="modal-body" data-modal-body>
-            {current.status === "loading" && <div className="muted">thinking…</div>}
+            {current.status === "loading" && <Dots />}
             {current.status === "error" && (
               <div className="error">⚠️ {current.error}</div>
             )}
             {(current.status === "streaming" || current.status === "done") && (
               <Markdown>{current.text || ""}</Markdown>
             )}
-            {current.status === "streaming" && <span className="caret">▍</span>}
           </div>
         </div>
       </div>

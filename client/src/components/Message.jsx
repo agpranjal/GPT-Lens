@@ -1,4 +1,5 @@
 import Markdown from "./Markdown.jsx";
+import Dots from "./Dots.jsx";
 
 // A single chat message. Assistant messages carry data attributes so the
 // global selection handler in App can resolve which message a selection belongs to,
@@ -11,7 +12,7 @@ export default function Message({ message }) {
   if (isAssistant) {
     return (
       <div className="message assistant" data-message-id={id}>
-        {content ? <Markdown>{content}</Markdown> : <span className="caret">▍</span>}
+        {content ? <Markdown>{content}</Markdown> : <Dots />}
       </div>
     );
   }

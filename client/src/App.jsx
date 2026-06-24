@@ -234,6 +234,7 @@ export default function App() {
         sourceMessageText,
         variants: { [key]: variant },
         order: [key],
+        selectedOrder: [key], // chip display order, most-recently-clicked first
         activeKey: key,
       };
       setModal((m) => {
@@ -263,7 +264,13 @@ export default function App() {
             ? {
                 ...mm,
                 frames: mm.frames.map((f) =>
-                  f.id === frame.id ? { ...f, activeKey: key } : f
+                  f.id === frame.id
+                    ? {
+                        ...f,
+                        activeKey: key,
+                        selectedOrder: [key, ...f.selectedOrder.filter((k) => k !== key)],
+                      }
+                    : f
                 ),
               }
             : mm
@@ -291,6 +298,7 @@ export default function App() {
                       ...f,
                       variants: { ...f.variants, [key]: variant },
                       order: [...f.order, key],
+                      selectedOrder: [key, ...f.selectedOrder.filter((k) => k !== key)],
                       activeKey: key,
                     }
                   : f

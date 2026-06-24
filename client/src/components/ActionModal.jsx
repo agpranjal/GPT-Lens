@@ -47,9 +47,16 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
       };
     }),
   ];
-  const orderedChips = [...chips].sort((x, y) =>
-    x.key === frame.activeKey ? -1 : y.key === frame.activeKey ? 1 : 0
-  );
+  // Clicked chips lead, most-recent first (MRU); the rest keep default order.
+  const rank = (key) => {
+    const i = frame.selectedOrder.indexOf(key);
+    return i === -1 ? Infinity : i;
+  };
+  const orderedChips = [...chips].sort((x, y) => {
+    const rx = rank(x.key);
+    const ry = rank(y.key);
+    return rx === ry ? 0 : rx - ry;
+  });
 
   function submitCustom(e) {
     e.preventDefault();

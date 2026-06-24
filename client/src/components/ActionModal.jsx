@@ -29,6 +29,28 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
   // Custom variants created on this frame (in creation order), for chips.
   const customKeys = frame.order.filter((k) => frame.variants[k]?.kind === "custom");
 
+  // All chips (standard actions + custom), with the active one moved to front.
+  const chips = [
+    ...ACTIONS.map((a) => ({
+      key: a.action,
+      display: a.label,
+      payload: a,
+      generated: !!frame.variants[a.action],
+    })),
+    ...customKeys.map((k) => {
+      const v = frame.variants[k];
+      return {
+        key: k,
+        display: shorten(v.label, 20),
+        payload: { custom: v.custom, label: v.label },
+        generated: true,
+      };
+    }),
+  ];
+  const orderedChips = [...chips].sort((x, y) =>
+    x.key === frame.activeKey ? -1 : y.key === frame.activeKey ? 1 : 0
+  );
+
   function submitCustom(e) {
     e.preventDefault();
     const text = custom.trim();
@@ -72,35 +94,21 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
             <blockquote className="modal-snippet">{frame.selectedText}</blockquote>
           </div>
 
-          {/* lenses on this snippet — horizontally scrollable, never wraps */}
+          {/* lenses on this snippet — horizontally scrollable, never wraps.
+              the active chip is moved to the front. */}
           <div className="variant-chips">
-            {ACTIONS.map((a) => {
-              const v = frame.variants[a.action];
-              const active = frame.activeKey === a.action;
-              return (
-                <button
-                  key={a.action}
-                  className={`chip${active ? " active" : ""}${v ? " generated" : ""}`}
-                  onClick={() => onVariant(a)}
-                >
-                  {a.label}
-                </button>
-              );
-            })}
-            {customKeys.map((k) => {
-              const v = frame.variants[k];
-              const active = frame.activeKey === k;
-              return (
-                <button
-                  key={k}
-                  className={`chip generated${active ? " active" : ""}`}
-                  onClick={() => onVariant({ custom: v.custom, label: v.label })}
-                  title={v.label}
-                >
-                  {shorten(v.label, 20)}
-                </button>
-              );
-            })}
+            {orderedChips.map((c) => (
+              <button
+                key={c.key}
+                className={`chip${c.key === frame.activeKey ? " active" : ""}${
+                  c.generated ? " generated" : ""
+                }`}
+                onClick={() => onVariant(c.payload)}
+                title={c.display}
+              >
+                {c.display}
+              </button>
+            ))}
             <form className="chip-custom" onSubmit={submitCustom}>
               <input
                 value={custom}

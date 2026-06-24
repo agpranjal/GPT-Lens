@@ -318,7 +318,8 @@ body {
   flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
-  padding: 12px 22px 0;
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--border);
   overflow-x: auto;
   flex-shrink: 0;
   scrollbar-width: none; /* Firefox */

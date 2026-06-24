@@ -6,16 +6,21 @@ import { streamChat, streamAction } from "./api.js";
 
 let nextId = 0;
 
+// Stable key for a variant: the action instruction, or "custom:<text>".
+const variantKey = ({ action, custom }) => (custom ? `custom:${custom}` : action);
+
 export default function App() {
   const [messages, setMessages] = useState([]); // { id, role, content }
   const [chatLoading, setChatLoading] = useState(false);
 
-  // Active selection inside an assistant message: { selectedText, sourceMessageText, rect }
+  // Active selection: { selectedText, sourceMessageText, rect }
   const [selection, setSelection] = useState(null);
 
-  // The action modal: null when closed, else a navigable history stack:
-  //   { frames: [{ id, label, selectedText, status, text, error }], index }
-  // Each frame is one explanation; `index` is the frame currently shown.
+  // The action modal: null when closed, else a navigable stack of frames.
+  //   frame = { id, selectedText, sourceMessageText, variants, order, activeKey }
+  //   variant = { key, kind, action, custom, label, status, text, error }
+  // Breadcrumbs (frames) = drill-down depth; variants = different lenses on the
+  // same snippet (toggle between them without re-asking).
   const [modal, setModal] = useState(null);
 
   const messagesRef = useRef(messages);
@@ -23,14 +28,13 @@ export default function App() {
   const modalRef = useRef(modal);
   modalRef.current = modal;
 
-  // AbortControllers for the in-flight chat stream and modal-action stream.
-  const abortRef = useRef(null);
-  const actionAbortRef = useRef(null);
+  const abortRef = useRef(null); // chat stream
+  const actionAbortRef = useRef(null); // modal action stream
 
-  // Detect a text selection inside an assistant message OR inside the modal body.
+  // Detect a text selection inside an assistant message OR the modal body.
   useEffect(() => {
     function onMouseUp(e) {
-      if (e.target.closest?.("[data-selection-popup]")) return; // ignore popup clicks
+      if (e.target.closest?.("[data-selection-popup]")) return;
 
       const sel = window.getSelection();
       const text = sel?.toString().trim();
@@ -39,22 +43,21 @@ export default function App() {
         return;
       }
       const anchorEl =
-        sel.anchorNode?.nodeType === 3
-          ? sel.anchorNode.parentElement
-          : sel.anchorNode;
+        sel.anchorNode?.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
       const rect = sel.getRangeAt(0).getBoundingClientRect();
 
-      // Selection inside the modal: source is the explanation currently shown.
+      // Inside the modal: source is the explanation currently shown.
       if (anchorEl?.closest?.("[data-modal-body]")) {
         const m = modalRef.current;
         if (m) {
           const frame = m.frames[m.index];
-          setSelection({ selectedText: text, sourceMessageText: frame.text, rect });
+          const v = frame.variants[frame.activeKey];
+          setSelection({ selectedText: text, sourceMessageText: v?.text || "", rect });
         }
         return;
       }
 
-      // Selection inside a chat assistant message.
+      // Inside a chat assistant message.
       const msgEl = anchorEl?.closest?.("[data-message-id]");
       if (!msgEl) {
         setSelection(null);
@@ -91,18 +94,16 @@ export default function App() {
     try {
       await streamChat(
         history,
-        (chunk) => {
+        (chunk) =>
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId ? { ...m, content: m.content + chunk } : m
             )
-          );
-        },
+          ),
         controller.signal
       );
     } catch (err) {
       if (err.name === "AbortError") {
-        // Keep whatever streamed so far; mark an empty reply as stopped.
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId && m.content === ""
@@ -123,59 +124,36 @@ export default function App() {
     }
   }, []);
 
-  const handleStop = useCallback(() => {
-    abortRef.current?.abort();
-  }, []);
+  const handleStop = useCallback(() => abortRef.current?.abort(), []);
 
-  const handleAction = useCallback(
-    async ({ action, custom, label }) => {
-      if (!selection) return;
-      const { selectedText, sourceMessageText } = selection;
-      const frameId = ++nextId;
-      const frame = { id: frameId, label, selectedText, status: "loading", text: "", error: "" };
+  // Stream an action result into a specific frame's variant (by frame id + key).
+  const streamIntoVariant = useCallback(async (frameId, key, payload) => {
+    const setVariant = (patch) =>
+      setModal((m) =>
+        m
+          ? {
+              ...m,
+              frames: m.frames.map((f) =>
+                f.id === frameId
+                  ? {
+                      ...f,
+                      variants: {
+                        ...f.variants,
+                        [key]: { ...f.variants[key], ...patch },
+                      },
+                    }
+                  : f
+              ),
+            }
+          : m
+      );
 
-      // Push a new frame. From the chat: start a fresh stack. From within the
-      // modal: append after the current frame, discarding any forward history.
-      setModal((m) => {
-        if (!m) return { frames: [frame], index: 0 };
-        const frames = [...m.frames.slice(0, m.index + 1), frame];
-        return { frames, index: frames.length - 1 };
-      });
-      setSelection(null);
-      window.getSelection()?.removeAllRanges();
-
-      // Patch the frame by id (merge static fields).
-      const patchFrame = (patch) =>
-        setModal((m) =>
-          m
-            ? { ...m, frames: m.frames.map((f) => (f.id === frameId ? { ...f, ...patch } : f)) }
-            : m
-        );
-
-      const controller = new AbortController();
-      actionAbortRef.current = controller;
-      try {
-        await streamAction(
-          { action, custom, selectedText, sourceMessageText },
-          (chunk) =>
-            setModal((m) =>
-              m
-                ? {
-                    ...m,
-                    frames: m.frames.map((f) =>
-                      f.id === frameId
-                        ? { ...f, status: "streaming", text: f.text + chunk }
-                        : f
-                    ),
-                  }
-                : m
-            ),
-          controller.signal
-        );
-        patchFrame({ status: "done" });
-      } catch (err) {
-        if (err.name === "AbortError") {
-          // Keep partial text; mark an empty frame as stopped.
+    const controller = new AbortController();
+    actionAbortRef.current = controller;
+    try {
+      await streamAction(
+        payload,
+        (chunk) =>
           setModal((m) =>
             m
               ? {
@@ -184,31 +162,157 @@ export default function App() {
                     f.id === frameId
                       ? {
                           ...f,
-                          status: "done",
-                          text: f.text || "*(stopped)*",
+                          variants: {
+                            ...f.variants,
+                            [key]: {
+                              ...f.variants[key],
+                              status: "streaming",
+                              text: f.variants[key].text + chunk,
+                            },
+                          },
                         }
                       : f
                   ),
                 }
               : m
-          );
-        } else {
-          patchFrame({ status: "error", error: err.message });
-        }
-      } finally {
-        if (actionAbortRef.current === controller) actionAbortRef.current = null;
+          ),
+        controller.signal
+      );
+      setVariant({ status: "done" });
+    } catch (err) {
+      if (err.name === "AbortError") {
+        setModal((m) =>
+          m
+            ? {
+                ...m,
+                frames: m.frames.map((f) =>
+                  f.id === frameId
+                    ? {
+                        ...f,
+                        variants: {
+                          ...f.variants,
+                          [key]: {
+                            ...f.variants[key],
+                            status: "done",
+                            text: f.variants[key].text || "*(stopped)*",
+                          },
+                        },
+                      }
+                    : f
+                ),
+              }
+            : m
+        );
+      } else {
+        setVariant({ status: "error", error: err.message });
       }
+    } finally {
+      if (actionAbortRef.current === controller) actionAbortRef.current = null;
+    }
+  }, []);
+
+  // From a selection (chat or modal body): push a NEW frame (drill-down).
+  const handleAction = useCallback(
+    async ({ action, custom, label }) => {
+      if (!selection) return;
+      const { selectedText, sourceMessageText } = selection;
+      const frameId = ++nextId;
+      const key = variantKey({ action, custom });
+      const variant = {
+        key,
+        kind: custom ? "custom" : "action",
+        action,
+        custom,
+        label: label || custom || action,
+        status: "loading",
+        text: "",
+        error: "",
+      };
+      const frame = {
+        id: frameId,
+        selectedText,
+        sourceMessageText,
+        variants: { [key]: variant },
+        order: [key],
+        activeKey: key,
+      };
+      setModal((m) => {
+        if (!m) return { frames: [frame], index: 0 };
+        const frames = [...m.frames.slice(0, m.index + 1), frame];
+        return { frames, index: frames.length - 1 };
+      });
+      setSelection(null);
+      window.getSelection()?.removeAllRanges();
+      await streamIntoVariant(frameId, key, { action, custom, selectedText, sourceMessageText });
     },
-    [selection]
+    [selection, streamIntoVariant]
+  );
+
+  // Run a different action on the CURRENT frame's snippet (same-snippet lens).
+  // If that variant already exists, just switch to it (cached, instant).
+  const handleVariant = useCallback(
+    async ({ action, custom, label }) => {
+      const m = modalRef.current;
+      if (!m) return;
+      const frame = m.frames[m.index];
+      const key = variantKey({ action, custom });
+
+      if (frame.variants[key]) {
+        setModal((mm) =>
+          mm
+            ? {
+                ...mm,
+                frames: mm.frames.map((f) =>
+                  f.id === frame.id ? { ...f, activeKey: key } : f
+                ),
+              }
+            : mm
+        );
+        return;
+      }
+
+      const variant = {
+        key,
+        kind: custom ? "custom" : "action",
+        action,
+        custom,
+        label: label || custom || action,
+        status: "loading",
+        text: "",
+        error: "",
+      };
+      setModal((mm) =>
+        mm
+          ? {
+              ...mm,
+              frames: mm.frames.map((f) =>
+                f.id === frame.id
+                  ? {
+                      ...f,
+                      variants: { ...f.variants, [key]: variant },
+                      order: [...f.order, key],
+                      activeKey: key,
+                    }
+                  : f
+              ),
+            }
+          : mm
+      );
+      await streamIntoVariant(frame.id, key, {
+        action,
+        custom,
+        selectedText: frame.selectedText,
+        sourceMessageText: frame.sourceMessageText,
+      });
+    },
+    [streamIntoVariant]
   );
 
   const handleNavigate = useCallback((index) => {
     setModal((m) => (m ? { ...m, index } : m));
   }, []);
 
-  const handleStopAction = useCallback(() => {
-    actionAbortRef.current?.abort();
-  }, []);
+  const handleStopAction = useCallback(() => actionAbortRef.current?.abort(), []);
 
   const handleCloseModal = useCallback(() => {
     actionAbortRef.current?.abort();
@@ -233,6 +337,7 @@ export default function App() {
           modal={modal}
           onClose={handleCloseModal}
           onNavigate={handleNavigate}
+          onVariant={handleVariant}
           onStop={handleStopAction}
         />
       )}

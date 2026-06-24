@@ -311,6 +311,53 @@ body {
   scrollbar-width: none; /* Firefox */
 }
 .modal-snippet::-webkit-scrollbar { display: none; } /* WebKit */
+
+/* variant chips: lenses on the same snippet — single scrollable row */
+.variant-chips {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 22px 0;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none; /* Firefox */
+}
+.variant-chips::-webkit-scrollbar { display: none; } /* WebKit */
+.chip {
+  flex-shrink: 0;
+  background: var(--bg);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.chip:hover { color: var(--text); border-color: var(--accent); }
+.chip.generated { color: var(--text); border-color: #4a4a4a; }
+.chip.active {
+  background: var(--accent);
+  color: #11243f;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.chip-custom { flex-shrink: 0; }
+.chip-custom input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text);
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 13px;
+  width: 130px;
+  outline: none;
+}
+.chip-custom input:focus { border-color: var(--accent); }
 .modal-body {
   padding: 18px 22px 24px;
   overflow-y: auto;

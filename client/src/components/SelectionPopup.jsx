@@ -1,17 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-
-const BUTTONS = [
-  { action: "Nah explain better", label: "Explain better" },
-  { action: "Explain with real world example", label: "Explain w/ example" },
-  { action: "Explain with real world mental simulation", label: "Explain w/ mental simulation" },
-  { action: "Simplify", label: "Simplify" },
-  { action: "Go deeper", label: "Go deeper" },
-  { action: "Explain w/ code", label: "Explain w/ code" },
-  { action: "Explain step by step", label: "Explain step by step" },
-  { action: "WTF is this", label: "WTF is this" },
-  { action: "What's the significance", label: "What's the significance" },
-  { action: "How", label: "How" },
-];
+import { ACTIONS } from "../actions.js";
 
 // Floating toolbar anchored above the current selection rect.
 export default function SelectionPopup({ rect, onAction }) {
@@ -53,7 +41,7 @@ export default function SelectionPopup({ rect, onAction }) {
       {/* preventDefault on the buttons keeps the highlight from flickering when
           clicked; the custom input is left free so it can receive focus. */}
       <div className="popup-buttons" onMouseDown={(e) => e.preventDefault()}>
-        {BUTTONS.map((b) => (
+        {ACTIONS.map((b) => (
           <button key={b.action} onClick={() => onAction(b)}>
             {b.label}
           </button>

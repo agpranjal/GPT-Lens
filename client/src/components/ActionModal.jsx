@@ -1,17 +1,21 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Markdown from "./Markdown.jsx";
+import { ACTIONS } from "../actions.js";
 
-function crumbLabel(text) {
+function shorten(text, n = 28) {
   const t = (text || "").trim().replace(/\s+/g, " ");
-  return t.length > 28 ? t.slice(0, 28) + "…" : t;
+  return t.length > n ? t.slice(0, n) + "…" : t;
 }
 
 // Modal showing a navigable stack of selection-action explanations.
-// Highlighting text inside the body and picking an action pushes a new frame.
-export default function ActionModal({ modal, onClose, onNavigate, onStop }) {
+// - Breadcrumbs (top) = drill-down depth (different snippets).
+// - Chip row = different lenses on the SAME snippet; click to generate/switch.
+export default function ActionModal({ modal, onClose, onNavigate, onVariant, onStop }) {
   const { frames, index } = modal;
-  const current = frames[index];
+  const frame = frames[index];
+  const current = frame.variants[frame.activeKey];
   const streaming = current.status === "loading" || current.status === "streaming";
+  const [custom, setCustom] = useState("");
 
   // Close on Escape.
   useEffect(() => {
@@ -21,6 +25,17 @@ export default function ActionModal({ modal, onClose, onNavigate, onStop }) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Custom variants created on this frame (in creation order), for chips.
+  const customKeys = frame.order.filter((k) => frame.variants[k]?.kind === "custom");
+
+  function submitCustom(e) {
+    e.preventDefault();
+    const text = custom.trim();
+    if (!text) return;
+    onVariant({ custom: text, label: text });
+    setCustom("");
+  }
 
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
@@ -35,7 +50,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onStop }) {
                   onClick={() => onNavigate(i)}
                   title={f.selectedText}
                 >
-                  {crumbLabel(f.selectedText)}
+                  {shorten(f.selectedText)}
                 </button>
               </span>
             ))}
@@ -54,14 +69,49 @@ export default function ActionModal({ modal, onClose, onNavigate, onStop }) {
 
         <div className="modal-content">
           <div className="modal-meta">
-            <span className="modal-label">{current.label}</span>
-            <blockquote className="modal-snippet">{current.selectedText}</blockquote>
+            <blockquote className="modal-snippet">{frame.selectedText}</blockquote>
+          </div>
+
+          {/* lenses on this snippet — horizontally scrollable, never wraps */}
+          <div className="variant-chips">
+            {ACTIONS.map((a) => {
+              const v = frame.variants[a.action];
+              const active = frame.activeKey === a.action;
+              return (
+                <button
+                  key={a.action}
+                  className={`chip${active ? " active" : ""}${v ? " generated" : ""}`}
+                  onClick={() => onVariant(a)}
+                >
+                  {a.label}
+                </button>
+              );
+            })}
+            {customKeys.map((k) => {
+              const v = frame.variants[k];
+              const active = frame.activeKey === k;
+              return (
+                <button
+                  key={k}
+                  className={`chip generated${active ? " active" : ""}`}
+                  onClick={() => onVariant({ custom: v.custom, label: v.label })}
+                  title={v.label}
+                >
+                  {shorten(v.label, 20)}
+                </button>
+              );
+            })}
+            <form className="chip-custom" onSubmit={submitCustom}>
+              <input
+                value={custom}
+                onChange={(e) => setCustom(e.target.value)}
+                placeholder="ask your own…"
+              />
+            </form>
           </div>
 
           <div className="modal-body" data-modal-body>
-            {current.status === "loading" && (
-              <div className="muted">thinking…</div>
-            )}
+            {current.status === "loading" && <div className="muted">thinking…</div>}
             {current.status === "error" && (
               <div className="error">⚠️ {current.error}</div>
             )}

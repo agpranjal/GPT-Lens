@@ -42,8 +42,8 @@ export function buildQuestionsPrompt({ sourceMessageText, selectedText }) {
     "ask about the highlighted part. Choose whatever angles and depths are genuinely",
     "useful for understanding this specific thing — you decide what's worth asking.",
     "Maximize variety: vary between simple and advanced, and do not ask ten variations",
-    "of the same question. Avoid generic restatements like \"What is X?\". Keep each",
-    "question short and concrete.",
+    "of the same question.",
+    "Keep each question short and concrete.",
     "Return ONLY the questions, one per line, with no numbering, bullets, or preamble.",
   ].join("\n");
 }

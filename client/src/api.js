@@ -35,3 +35,15 @@ export function streamAction({ action, custom, selectedText, sourceMessageText }
     signal
   );
 }
+
+// Experimental: get suggested questions for a snippet. Returns { questions: [...] }.
+export async function fetchQuestions({ selectedText, sourceMessageText }) {
+  const res = await fetch("/api/questions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ selectedText, sourceMessageText }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `request failed (${res.status})`);
+  return data;
+}

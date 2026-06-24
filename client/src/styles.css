@@ -213,6 +213,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: 24px;
+  animation: overlay-in 0.15s ease-out;
 }
 .modal {
   background: var(--modal);
@@ -225,6 +226,19 @@ body {
   flex-direction: column;
   overflow: hidden; /* clip children to the rounded corners */
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
+  animation: modal-in 0.18s ease-out;
+  transform-origin: center;
+}
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay, .modal { animation: none; }
 }
 .modal-header {
   display: flex;
@@ -254,17 +268,21 @@ body {
 .modal-stop:hover { background: #d65a5a; }
 .modal-breadcrumbs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 2px;
   min-width: 0;
   font-size: 13px;
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
 }
-.crumb-wrap { display: inline-flex; align-items: center; }
+.modal-breadcrumbs::-webkit-scrollbar { display: none; } /* WebKit */
+.crumb-wrap { display: inline-flex; align-items: center; flex-shrink: 0; }
 .crumb-sep { color: var(--muted); margin: 0 4px; }
 .crumb {
   background: none;
   border: none;
+  outline: none;
   color: var(--muted);
   cursor: pointer;
   padding: 2px 4px;
@@ -371,6 +389,53 @@ body {
   outline: none;
 }
 .chip-custom input:focus { border-color: var(--accent); }
+/* the experimental "Questions" chip/button (rendered as a "?") */
+.chip-special {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 15px;
+  padding: 5px 13px;
+}
+.chip-special.active {
+  background: var(--accent);
+  color: #11243f;
+}
+.popup-special {
+  background: var(--accent) !important;
+  color: #11243f !important;
+  border: none !important;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 6px 13px;
+}
+
+/* questions list (experimental) */
+.questions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.questions-hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+.question-item {
+  text-align: left;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  line-height: 1.4;
+}
+.question-item:hover {
+  border-color: var(--accent);
+  background: rgba(138, 180, 248, 0.08);
+}
 .modal-body {
   padding: 18px 22px 24px;
   overflow-y: auto;

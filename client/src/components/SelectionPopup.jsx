@@ -41,6 +41,13 @@ export default function SelectionPopup({ rect, onAction }) {
       {/* preventDefault on the buttons keeps the highlight from flickering when
           clicked; the custom input is left free so it can receive focus. */}
       <div className="popup-buttons" onMouseDown={(e) => e.preventDefault()}>
+        <button
+          className="popup-special"
+          title="Suggested questions"
+          onClick={() => onAction({ questions: true, label: "Questions" })}
+        >
+          ?
+        </button>
         {ACTIONS.map((b) => (
           <button key={b.action} onClick={() => onAction(b)}>
             {b.label}

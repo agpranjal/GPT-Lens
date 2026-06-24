@@ -40,3 +40,14 @@ export function generateStream(prompt) {
     messages: [{ role: "user", content: prompt }],
   });
 }
+
+// One-shot, non-streaming generation returning the full text (used for questions).
+export async function generateText(prompt) {
+  const res = await anthropic().messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    system: SYSTEM,
+    messages: [{ role: "user", content: prompt }],
+  });
+  return res.content.map((b) => (b.type === "text" ? b.text : "")).join("");
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Markdown from "./Markdown.jsx";
 import Dots from "./Dots.jsx";
-import { ACTIONS } from "../actions.js";
+import { ACTIONS, QUESTIONS_KEY } from "../actions.js";
 
 function shorten(text, n = 28) {
   const t = (text || "").trim().replace(/\s+/g, " ");
@@ -37,7 +37,16 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
   // Custom variants created on this frame (in creation order), for chips.
   const customKeys = frame.order.filter((k) => frame.variants[k]?.kind === "custom");
 
-  // All chips (standard actions + custom), with the active one moved to front.
+  // The "Questions" chip is pinned to the front (never reordered by MRU).
+  const questionsChip = {
+    key: QUESTIONS_KEY,
+    display: "?",
+    title: "Suggested questions",
+    payload: { questions: true, label: "Questions" },
+    generated: !!frame.variants[QUESTIONS_KEY],
+    special: true,
+  };
+  // The rest of the chips: standard actions, then customs (these get MRU-sorted).
   const chips = [
     ...ACTIONS.map((a) => ({
       key: a.action,
@@ -60,11 +69,14 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
     const i = frame.selectedOrder.indexOf(key);
     return i === -1 ? Infinity : i;
   };
-  const orderedChips = [...chips].sort((x, y) => {
-    const rx = rank(x.key);
-    const ry = rank(y.key);
-    return rx === ry ? 0 : rx - ry;
-  });
+  const orderedChips = [
+    questionsChip,
+    ...[...chips].sort((x, y) => {
+      const rx = rank(x.key);
+      const ry = rank(y.key);
+      return rx === ry ? 0 : rx - ry;
+    }),
+  ];
 
   function submitCustom(e) {
     e.preventDefault();
@@ -117,9 +129,9 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
                 key={c.key}
                 className={`chip${c.key === frame.activeKey ? " active" : ""}${
                   c.generated ? " generated" : ""
-                }`}
+                }${c.special ? " chip-special" : ""}`}
                 onClick={() => onVariant(c.payload)}
-                title={c.display}
+                title={c.title || c.display}
               >
                 {c.display}
               </button>
@@ -138,9 +150,24 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
             {current.status === "error" && (
               <div className="error">⚠️ {current.error}</div>
             )}
-            {(current.status === "streaming" || current.status === "done") && (
-              <Markdown>{current.text || ""}</Markdown>
-            )}
+            {current.kind === "questions"
+              ? current.status === "done" && (
+                  <div className="questions-list">
+                    <div className="questions-hint">Pick a question to explore:</div>
+                    {current.questions.map((q, i) => (
+                      <button
+                        key={i}
+                        className="question-item"
+                        onClick={() => onVariant({ custom: q, label: q })}
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                )
+              : (current.status === "streaming" || current.status === "done") && (
+                  <Markdown>{current.text || ""}</Markdown>
+                )}
           </div>
         </div>
       </div>

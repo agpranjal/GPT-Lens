@@ -2,12 +2,30 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ChatView from "./components/ChatView.jsx";
 import SelectionPopup from "./components/SelectionPopup.jsx";
 import ActionModal from "./components/ActionModal.jsx";
-import { streamChat, streamAction } from "./api.js";
+import { streamChat, streamAction, fetchQuestions } from "./api.js";
+import { QUESTIONS_KEY } from "./actions.js";
 
 let nextId = 0;
 
-// Stable key for a variant: the action instruction, or "custom:<text>".
-const variantKey = ({ action, custom }) => (custom ? `custom:${custom}` : action);
+// Stable key for a variant: questions, custom:<text>, or the action instruction.
+const variantKey = ({ action, custom, questions }) =>
+  questions ? QUESTIONS_KEY : custom ? `custom:${custom}` : action;
+
+// Build a fresh variant object for a given payload.
+const makeVariant = ({ action, custom, label, questions }) => {
+  const key = variantKey({ action, custom, questions });
+  return {
+    key,
+    kind: questions ? "questions" : custom ? "custom" : "action",
+    action,
+    custom,
+    label: label || custom || action || "Questions",
+    status: "loading",
+    text: "",
+    error: "",
+    questions: [],
+  };
+};
 
 export default function App() {
   const [messages, setMessages] = useState([]); // { id, role, content }
@@ -211,23 +229,61 @@ export default function App() {
     }
   }, []);
 
+  // Merge a patch into a specific frame's variant.
+  const patchVariantState = useCallback(
+    (frameId, key, patch) =>
+      setModal((m) =>
+        m
+          ? {
+              ...m,
+              frames: m.frames.map((f) =>
+                f.id === frameId
+                  ? {
+                      ...f,
+                      variants: {
+                        ...f.variants,
+                        [key]: { ...f.variants[key], ...patch },
+                      },
+                    }
+                  : f
+              ),
+            }
+          : m
+      ),
+    []
+  );
+
+  // Fetch suggested questions into a frame's questions-variant (non-streaming).
+  const runQuestions = useCallback(
+    async (frameId, key, payload) => {
+      try {
+        const { questions } = await fetchQuestions(payload);
+        patchVariantState(frameId, key, { status: "done", questions: questions || [] });
+      } catch (err) {
+        patchVariantState(frameId, key, { status: "error", error: err.message });
+      }
+    },
+    [patchVariantState]
+  );
+
+  // Kick off the right backend call for a variant (questions vs streamed action).
+  const runVariant = useCallback(
+    (frameId, payload, snippet) => {
+      const key = variantKey(payload);
+      if (payload.questions) return runQuestions(frameId, key, snippet);
+      return streamIntoVariant(frameId, key, { ...payload, ...snippet });
+    },
+    [runQuestions, streamIntoVariant]
+  );
+
   // From a selection (chat or modal body): push a NEW frame (drill-down).
   const handleAction = useCallback(
-    async ({ action, custom, label }) => {
+    async (payload) => {
       if (!selection) return;
       const { selectedText, sourceMessageText } = selection;
       const frameId = ++nextId;
-      const key = variantKey({ action, custom });
-      const variant = {
-        key,
-        kind: custom ? "custom" : "action",
-        action,
-        custom,
-        label: label || custom || action,
-        status: "loading",
-        text: "",
-        error: "",
-      };
+      const variant = makeVariant(payload);
+      const key = variant.key;
       const frame = {
         id: frameId,
         selectedText,
@@ -244,19 +300,19 @@ export default function App() {
       });
       setSelection(null);
       window.getSelection()?.removeAllRanges();
-      await streamIntoVariant(frameId, key, { action, custom, selectedText, sourceMessageText });
+      await runVariant(frameId, payload, { selectedText, sourceMessageText });
     },
-    [selection, streamIntoVariant]
+    [selection, runVariant]
   );
 
   // Run a different action on the CURRENT frame's snippet (same-snippet lens).
   // If that variant already exists, just switch to it (cached, instant).
   const handleVariant = useCallback(
-    async ({ action, custom, label }) => {
+    async (payload) => {
       const m = modalRef.current;
       if (!m) return;
       const frame = m.frames[m.index];
-      const key = variantKey({ action, custom });
+      const key = variantKey(payload);
 
       if (frame.variants[key]) {
         setModal((mm) =>
@@ -278,16 +334,7 @@ export default function App() {
         return;
       }
 
-      const variant = {
-        key,
-        kind: custom ? "custom" : "action",
-        action,
-        custom,
-        label: label || custom || action,
-        status: "loading",
-        text: "",
-        error: "",
-      };
+      const variant = makeVariant(payload);
       setModal((mm) =>
         mm
           ? {
@@ -306,14 +353,12 @@ export default function App() {
             }
           : mm
       );
-      await streamIntoVariant(frame.id, key, {
-        action,
-        custom,
+      await runVariant(frame.id, payload, {
         selectedText: frame.selectedText,
         sourceMessageText: frame.sourceMessageText,
       });
     },
-    [streamIntoVariant]
+    [runVariant]
   );
 
   const handleNavigate = useCallback((index) => {

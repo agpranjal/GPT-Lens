@@ -1,7 +1,12 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { chatStream, generateStream, generateText } from "./claude.js";
+import {
+  chatStream,
+  generateStream,
+  generateText,
+  makeReasoningFilter,
+} from "./llm.js";
 import {
   buildActionPrompt,
   resolveInstruction,
@@ -14,21 +19,25 @@ app.use(express.json({ limit: "1mb" }));
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-// Pipe an Anthropic message stream to the HTTP response as plain-text chunks.
-async function pipeStream(res, stream) {
+// Pipe an OpenAI-compatible chat-completion stream to the HTTP response as
+// plain-text chunks. `streamPromise` resolves to the SDK's Stream object.
+async function pipeStream(res, streamPromise) {
+  const stream = await streamPromise;
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("X-Accel-Buffering", "no"); // disable proxy buffering
   // If the client disconnects (e.g. Stop pressed), abort the upstream request.
-  res.on("close", () => stream.abort?.());
-  for await (const event of stream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
-      res.write(event.delta.text);
+  res.on("close", () => stream.controller?.abort());
+  const filter = makeReasoningFilter();
+  for await (const chunk of stream) {
+    const text = chunk.choices?.[0]?.delta?.content;
+    if (text) {
+      const visible = filter.push(text);
+      if (visible) res.write(visible);
     }
   }
+  const tail = filter.flush();
+  if (tail) res.write(tail);
   res.end();
 }
 

@@ -9,11 +9,8 @@ export const ACTIONS = [
   { action: "Explain with real world example", label: "Explain w/ example" },
   { action: "Go deeper", label: "Go deeper" },
   { action: "Explain step by step", label: "Explain step by step" },
-  { action: "Explain with real world mental simulation", label: "Explain w/ mental simulation" },
   { action: "Explain w/ code", label: "Explain w/ code" },
   { action: "WTF is this", label: "WTF is this" },
-  { action: "What's the significance", label: "What's the significance" },
   { action: "How", label: "How" },
   { action: "Why", label: "Why" },
-  { action: "Simplify", label: "Simplify" },
 ];

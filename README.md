@@ -1,6 +1,6 @@
 # learnmaxx
 
-A ChatGPT-style chat app (prompt → MiniMax → streamed response) with a
+A ChatGPT-style chat app (prompt → LLM → streamed response) with a
 **selection-driven follow-up layer**: highlight any part of a reply, pick an
 action ("Explain better", "Give an example", "Simplify", "wtf is this", or type
 your own), and the answer streams into a modal.
@@ -8,7 +8,7 @@ your own), and the answer streams into a modal.
 ## Stack
 - **Client:** React + Vite
 - **Server:** Node + Express (stateless)
-- **LLM:** MiniMax via the OpenAI-compatible API (`openai` SDK, default model `MiniMax-M3`)
+- **LLM:** [OpenRouter](https://openrouter.ai) via the `openai` SDK (OpenAI-compatible endpoint) — gives access to any model on OpenRouter by changing `OPENROUTER_MODEL`. Default `google/gemini-2.5-flash`.
 
 ## Setup
 
@@ -20,7 +20,7 @@ Create `server/.env` from the example and add your key:
 
 ```bash
 cp server/.env.example server/.env
-# then edit server/.env and set MINIMAX_API_KEY=...
+# then edit server/.env and set OPENROUTER_API_KEY=...
 ```
 
 ## Run (dev)
@@ -40,5 +40,5 @@ Both endpoints stream plain-text chunks back to the client:
 - `POST /api/chat`  — `{ messages: [{role, content}] }` → streamed text
 - `POST /api/action` — `{ action, selectedText, sourceMessageText, custom? }` → streamed text
 
-The MiniMax API key lives only on the server and is never exposed to the client.
+The OpenRouter API key lives only on the server and is never exposed to the client.
 Selection-action prompts are assembled in `server/prompts.js`.

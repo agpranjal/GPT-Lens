@@ -2,7 +2,7 @@
   "name": "learnmaxx",
   "version": "0.1.0",
   "private": true,
-  "description": "learnmaxx — chat app with selection-driven follow-up actions powered by MiniMax",
+  "description": "learnmaxx — chat app with selection-driven follow-up actions powered by OpenRouter",
   "scripts": {
     "dev": "concurrently -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "npm --prefix server run dev",

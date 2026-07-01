@@ -249,9 +249,8 @@ body {
   background: var(--modal);
   border: 1px solid var(--border);
   border-radius: 16px;
-  width: 100%;
-  max-width: 680px;
-  max-height: 82vh;
+  width: min(90vw, 880px);
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   overflow: hidden; /* clip children to the rounded corners */
@@ -489,11 +488,15 @@ body {
 .modal-body .muted { color: var(--muted); font-style: italic; }
 .modal-body .error { color: #ff7676; }
 
-/* follow-up thread: continues the current lens's answer, persists per-lens */
+/* follow-up thread: continues the current lens's answer, persists per-lens.
+   Each turn gets its own card so a stack of follow-ups reads as distinct
+   exchanges instead of blending into one continuous scroll. */
 .followup {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid var(--border);
+  margin-top: 20px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--border);
+  border-radius: 12px;
 }
 .followup-q {
   display: inline-block;
@@ -501,7 +504,8 @@ body {
   border-radius: 14px;
   padding: 8px 14px;
   font-size: 14px;
-  margin-bottom: 10px;
+  font-weight: 500;
+  margin-bottom: 12px;
 }
 .followup-a { font-size: inherit; }
 

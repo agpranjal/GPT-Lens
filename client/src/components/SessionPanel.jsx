@@ -1,7 +1,8 @@
 // Collapsible left rail listing saved modal sessions (newest first).
 // Sessions live only in memory — a page reload clears them.
+// Slides open on hover, slides shut when the pointer leaves.
 
-// A panel/sidebar glyph — same toggle in both states (no hamburger).
+// A panel/sidebar glyph shown on the collapsed strip.
 function SidebarIcon() {
   return (
     <svg
@@ -25,72 +26,62 @@ export default function SessionPanel({
   sessions,
   activeId,
   collapsed,
-  onToggle,
+  onExpand,
+  onCollapse,
   onOpen,
   onDelete,
 }) {
-  if (collapsed) {
-    return (
-      <aside className="session-panel collapsed">
-        <div className="panel-rail">
-          <button
-            className="panel-toggle"
-            onClick={onToggle}
-            title="Show saved sessions (⌘.)"
-            aria-label="Show saved sessions"
-          >
-            <SidebarIcon />
-          </button>
-          {sessions.length > 0 && <span className="panel-count">{sessions.length}</span>}
-        </div>
-      </aside>
-    );
-  }
-
   return (
-    <aside className="session-panel">
-      <div className="panel-header">
-        <span className="panel-title">Saved {sessions.length > 0 && `(${sessions.length})`}</span>
-        <button
-          className="panel-toggle"
-          onClick={onToggle}
-          title="Hide panel (⌘.)"
-          aria-label="Hide panel"
-        >
+    <aside
+      className={`session-panel${collapsed ? " collapsed" : ""}`}
+      onMouseEnter={onExpand}
+      onMouseLeave={onCollapse}
+    >
+      <div className="panel-rail">
+        <span className="panel-toggle" title="Saved sessions">
           <SidebarIcon />
-        </button>
+          {sessions.length > 0 && <span className="panel-count">{sessions.length}</span>}
+        </span>
       </div>
-      <div className="panel-list">
-        {sessions.length === 0 ? (
-          <div className="panel-empty">
-            Saved sessions appear here. Highlight text in a reply and pick an action.
-          </div>
-        ) : (
-          sessions.map((s) => (
-            <div
-              key={s.id}
-              className={`panel-item${s.id === activeId ? " active" : ""}`}
-              onClick={() => onOpen(s.id)}
-              title={s.title}
-            >
-              <div className="panel-item-text">
-                <div className="panel-item-title">{s.title}</div>
-                <div className="panel-item-sub">{s.label}</div>
-              </div>
-              <button
-                className="panel-item-del"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(s.id);
-                }}
-                title="Delete"
-                aria-label="Delete session"
-              >
-                ✕
-              </button>
+
+      <div className="panel-body">
+        <div className="panel-header">
+          <span className="panel-title">
+            Saved {sessions.length > 0 && `(${sessions.length})`}
+          </span>
+        </div>
+        <div className="panel-list">
+          {sessions.length === 0 ? (
+            <div className="panel-empty">
+              Saved sessions appear here. Highlight text in a reply and pick an action.
             </div>
-          ))
-        )}
+          ) : (
+            sessions.map((s) => (
+              <div
+                key={s.id}
+                className={`panel-item${s.id === activeId ? " active" : ""}`}
+                onClick={() => onOpen(s.id)}
+                title={s.title}
+              >
+                <div className="panel-item-text">
+                  <div className="panel-item-title">{s.title}</div>
+                  <div className="panel-item-sub">{s.label}</div>
+                </div>
+                <button
+                  className="panel-item-del"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(s.id);
+                  }}
+                  title="Delete"
+                  aria-label="Delete session"
+                >
+                  ✕
+                </button>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </aside>
   );

@@ -1,15 +1,24 @@
 import OpenAI from "openai";
+import { DEFAULT_MODEL, DEFAULT_REASONING, reasoningMaxTokens } from "./models.js";
 
 const BASE_URL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
-const MODEL = process.env.OPENROUTER_MODEL || "openai/gpt-oss-120b";
 const MAX_TOKENS = Number(process.env.OPENROUTER_MAX_TOKENS) || 8192;
-// Hard thinking-token budget so reasoning models (e.g. gemini-2.5-pro) keep
-// their answer quality without stalling on time-to-first-token.
-const REASONING = {
-  reasoning: {
-    max_tokens: Number(process.env.OPENROUTER_REASONING_MAX_TOKENS) || 128,
-  },
-};
+
+// Resolve the per-request model/reasoning overrides (from the UI) down to
+// concrete values, falling back to the server defaults.
+function resolveParams({ model, reasoning } = {}) {
+  const budget = reasoningMaxTokens(reasoning) ?? reasoningMaxTokens(DEFAULT_REASONING);
+  return {
+    model: model || DEFAULT_MODEL,
+    // Hard thinking-token budget so reasoning models (e.g. gemini-2.5-pro)
+    // keep their answer quality without stalling on time-to-first-token.
+    // Some models (e.g. gemini-3.1-pro, gpt-5-mini) treat reasoning as
+    // mandatory and 400 on an explicit 0 — clamp "off" to the smallest
+    // nonzero budget instead, which those models accept and everything
+    // else still treats as effectively no reasoning.
+    reasoning: { max_tokens: Math.max(budget, 1) },
+  };
+}
 
 // Applied to every request (chat + actions).
 const SYSTEM = [
@@ -88,13 +97,15 @@ function llm() {
 }
 
 // Multi-turn chat, streamed. `messages` is [{ role: "user" | "assistant", content }].
+// `opts`: { model?, reasoning? } — reasoning is a level id ("off"|"low"|"medium"|"high").
 // Returns a Promise<Stream> of OpenAI chat-completion chunks.
-export function chatStream(messages) {
+export function chatStream(messages, opts) {
+  const { model, reasoning } = resolveParams(opts);
   return llm().chat.completions.create({
-    model: MODEL,
+    model,
     max_tokens: MAX_TOKENS,
     stream: true,
-    ...REASONING,
+    reasoning,
     messages: [
       { role: "system", content: SYSTEM },
       ...messages.map((m) => ({
@@ -106,12 +117,13 @@ export function chatStream(messages) {
 }
 
 // One-shot generation from a single prompt string, streamed (used by selection actions).
-export function generateStream(prompt) {
+export function generateStream(prompt, opts) {
+  const { model, reasoning } = resolveParams(opts);
   return llm().chat.completions.create({
-    model: MODEL,
+    model,
     max_tokens: MAX_TOKENS,
     stream: true,
-    ...REASONING,
+    reasoning,
     messages: [
       { role: "system", content: SYSTEM },
       { role: "user", content: prompt },
@@ -120,11 +132,12 @@ export function generateStream(prompt) {
 }
 
 // One-shot, non-streaming generation returning the full text (used for questions).
-export async function generateText(prompt) {
+export async function generateText(prompt, opts) {
+  const { model, reasoning } = resolveParams(opts);
   const res = await llm().chat.completions.create({
-    model: MODEL,
+    model,
     max_tokens: 1024,
-    ...REASONING,
+    reasoning,
     messages: [
       { role: "system", content: SYSTEM },
       { role: "user", content: prompt },

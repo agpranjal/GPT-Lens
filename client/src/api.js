@@ -21,27 +21,39 @@ async function stream(url, body, onChunk, signal) {
   }
 }
 
+// The curated model + reasoning-level list for the UI selector.
+export async function fetchModels() {
+  const res = await fetch("/api/models");
+  if (!res.ok) throw new Error(`request failed (${res.status})`);
+  return res.json();
+}
+
 // messages: [{ role: "user" | "assistant", content }]
-export function streamChat(messages, onChunk, signal) {
-  return stream("/api/chat", { messages }, onChunk, signal);
+export function streamChat(messages, llmOpts, onChunk, signal) {
+  return stream("/api/chat", { messages, ...llmOpts }, onChunk, signal);
 }
 
 // action: key string; custom: optional free-text instruction
-export function streamAction({ action, custom, selectedText, sourceMessageText }, onChunk, signal) {
+export function streamAction(
+  { action, custom, selectedText, sourceMessageText },
+  llmOpts,
+  onChunk,
+  signal
+) {
   return stream(
     "/api/action",
-    { action, custom, selectedText, sourceMessageText },
+    { action, custom, selectedText, sourceMessageText, ...llmOpts },
     onChunk,
     signal
   );
 }
 
 // Experimental: get suggested questions for a snippet. Returns { questions: [...] }.
-export async function fetchQuestions({ selectedText, sourceMessageText }) {
+export async function fetchQuestions({ selectedText, sourceMessageText }, llmOpts) {
   const res = await fetch("/api/questions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ selectedText, sourceMessageText }),
+    body: JSON.stringify({ selectedText, sourceMessageText, ...llmOpts }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || `request failed (${res.status})`);

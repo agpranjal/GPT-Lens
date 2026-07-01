@@ -3,7 +3,8 @@ import ChatView from "./components/ChatView.jsx";
 import SelectionPopup from "./components/SelectionPopup.jsx";
 import ActionModal from "./components/ActionModal.jsx";
 import SessionPanel from "./components/SessionPanel.jsx";
-import { streamChat, streamAction, fetchQuestions } from "./api.js";
+import ModelSelector from "./components/ModelSelector.jsx";
+import { streamChat, streamAction, fetchQuestions, fetchModels } from "./api.js";
 import { QUESTIONS_KEY } from "./actions.js";
 
 let nextId = 0;
@@ -51,6 +52,24 @@ export default function App() {
   // Which session is open in the modal (null = modal closed).
   const [activeId, setActiveId] = useState(null);
   const [panelCollapsed, setPanelCollapsed] = useState(true);
+
+  // Model + reasoning picker (header). Loaded from the server's curated
+  // allowlist; resets to the server default on reload, same as everything else.
+  const [modelOptions, setModelOptions] = useState({ models: [], reasoningLevels: [] });
+  const [model, setModel] = useState("");
+  const [reasoning, setReasoning] = useState("");
+  const llmOptsRef = useRef({ model: "", reasoning: "" });
+  llmOptsRef.current = { model, reasoning };
+
+  useEffect(() => {
+    fetchModels()
+      .then(({ models, reasoningLevels, defaultModel, defaultReasoning }) => {
+        setModelOptions({ models, reasoningLevels });
+        setModel(defaultModel);
+        setReasoning(defaultReasoning);
+      })
+      .catch(() => {}); // dropdown just stays hidden if this fails
+  }, []);
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
@@ -145,18 +164,6 @@ export default function App() {
     return () => document.removeEventListener("mouseup", onMouseUp);
   }, []);
 
-  // ⌘. (or Ctrl+.) toggles the saved-sessions panel.
-  useEffect(() => {
-    function onKey(e) {
-      if ((e.metaKey || e.ctrlKey) && e.key === ".") {
-        e.preventDefault();
-        setPanelCollapsed((c) => !c);
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, []);
-
   const handleSend = useCallback(async (prompt) => {
     const userMsg = { id: ++nextId, role: "user", content: prompt };
     const assistantId = ++nextId;
@@ -176,6 +183,7 @@ export default function App() {
     try {
       await streamChat(
         history,
+        llmOptsRef.current,
         (chunk) =>
           setMessages((prev) =>
             prev.map((m) =>
@@ -216,6 +224,7 @@ export default function App() {
       try {
         await streamAction(
           payload,
+          llmOptsRef.current,
           (chunk) =>
             updateFrameVariant(sessionId, frameId, key, (v) => ({
               ...v,
@@ -249,7 +258,7 @@ export default function App() {
   const runQuestions = useCallback(
     async (sessionId, frameId, key, payload) => {
       try {
-        const { questions } = await fetchQuestions(payload);
+        const { questions } = await fetchQuestions(payload, llmOptsRef.current);
         patchFrameVariant(sessionId, frameId, key, {
           status: "done",
           questions: questions || [],
@@ -421,13 +430,22 @@ export default function App() {
       <header className="app-header">
         <h1>learnmaxx</h1>
         <span className="hint">highlight any part of a reply to ask about it →</span>
+        <ModelSelector
+          models={modelOptions.models}
+          reasoningLevels={modelOptions.reasoningLevels}
+          model={model}
+          reasoning={reasoning}
+          onModelChange={setModel}
+          onReasoningChange={setReasoning}
+        />
       </header>
       <div className="app-main">
         <SessionPanel
           sessions={sessions}
           activeId={activeId}
           collapsed={panelCollapsed}
-          onToggle={() => setPanelCollapsed((c) => !c)}
+          onExpand={() => setPanelCollapsed(false)}
+          onCollapse={() => setPanelCollapsed(true)}
           onOpen={handleOpenSession}
           onDelete={handleDeleteSession}
         />

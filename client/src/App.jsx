@@ -428,7 +428,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>learnmaxx</h1>
+        <h1>skillmaxx</h1>
         <span className="hint">highlight any part of a reply to ask about it →</span>
         <ModelSelector
           models={modelOptions.models}

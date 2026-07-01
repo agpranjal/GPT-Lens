@@ -1,4 +1,4 @@
-# learnmaxx
+# skillmaxx
 
 A ChatGPT-style chat app (prompt → LLM → streamed response) with a
 **selection-driven follow-up layer**: highlight any part of a reply, pick an

@@ -68,10 +68,24 @@ export default function App() {
     fetchModels()
       .then(({ models, reasoningLevels, defaultModel, defaultReasoning }) => {
         setModelOptions({ models, reasoningLevels });
-        setModel(defaultModel);
-        setReasoning(defaultReasoning);
+        const savedModel = localStorage.getItem("skillmaxx:model");
+        const savedReasoning = localStorage.getItem("skillmaxx:reasoning");
+        setModel(models.some((m) => m.id === savedModel) ? savedModel : defaultModel);
+        setReasoning(
+          reasoningLevels.some((r) => r.id === savedReasoning) ? savedReasoning : defaultReasoning
+        );
       })
       .catch(() => {}); // dropdown just stays hidden if this fails
+  }, []);
+
+  // Persist the user's picks so they survive a reload.
+  const handleModelChange = useCallback((id) => {
+    setModel(id);
+    localStorage.setItem("skillmaxx:model", id);
+  }, []);
+  const handleReasoningChange = useCallback((id) => {
+    setReasoning(id);
+    localStorage.setItem("skillmaxx:reasoning", id);
   }, []);
 
   const messagesRef = useRef(messages);
@@ -514,8 +528,8 @@ export default function App() {
           reasoningLevels={modelOptions.reasoningLevels}
           model={model}
           reasoning={reasoning}
-          onModelChange={setModel}
-          onReasoningChange={setReasoning}
+          onModelChange={handleModelChange}
+          onReasoningChange={handleReasoningChange}
         />
       </header>
       <div className="app-main">

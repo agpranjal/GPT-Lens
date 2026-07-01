@@ -29,6 +29,13 @@ body {
   height: 100vh;
 }
 
+/* row holding the chat and the saved-sessions rail */
+.app-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
 /* ---- header ---- */
 .app-header {
   display: flex;
@@ -46,6 +53,7 @@ body {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-width: 0;
   min-height: 0;
 }
 
@@ -369,7 +377,18 @@ body {
   white-space: nowrap;
 }
 .chip:hover { color: var(--text); border-color: var(--accent); }
-.chip.generated { color: var(--text); border-color: #4a4a4a; }
+/* viewed lenses: clearly distinct from un-opened ones (filled + ✓) */
+.chip.generated {
+  color: var(--text);
+  background: rgba(138, 180, 248, 0.14);
+  border-color: rgba(138, 180, 248, 0.45);
+}
+.chip.generated:not(.active):not(.chip-special)::before {
+  content: "✓";
+  margin-right: 5px;
+  color: var(--accent);
+  font-weight: 700;
+}
 .chip.active {
   background: var(--accent);
   color: #11243f;
@@ -497,3 +516,115 @@ body {
   text-align: left;
 }
 .markdown hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+
+/* ---- saved-sessions side panel ---- */
+.session-panel {
+  flex-shrink: 0;
+  width: 280px;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+/* collapsed: a slim vertical strip that keeps the panel's edge visible */
+.session-panel.collapsed { width: 44px; }
+.panel-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+/* one consistent sidebar-glyph toggle, used in both states */
+.panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  line-height: 0;
+}
+.panel-toggle:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+.panel-count {
+  background: var(--accent);
+  color: #11243f;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 6px;
+  line-height: 18px;
+  min-width: 18px;
+  text-align: center;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-title { font-size: 13px; font-weight: 600; color: var(--muted); }
+.panel-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.panel-empty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 16px 10px;
+  line-height: 1.5;
+}
+.panel-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--user-bubble);
+}
+.panel-item:hover { border-color: var(--accent); }
+.panel-item.active {
+  border-color: var(--accent);
+  background: rgba(138, 180, 248, 0.12);
+}
+.panel-item-text { min-width: 0; flex: 1; }
+.panel-item-title {
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.panel-item-sub {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.panel-item-del {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  opacity: 0;
+}
+.panel-item:hover .panel-item-del { opacity: 1; }
+.panel-item-del:hover { color: #ff7676; background: rgba(255, 255, 255, 0.06); }

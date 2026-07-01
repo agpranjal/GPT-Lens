@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ChatView from "./components/ChatView.jsx";
 import SelectionPopup from "./components/SelectionPopup.jsx";
 import ActionModal from "./components/ActionModal.jsx";
+import SessionPanel from "./components/SessionPanel.jsx";
 import { streamChat, streamAction, fetchQuestions } from "./api.js";
 import { QUESTIONS_KEY } from "./actions.js";
 
@@ -27,27 +28,68 @@ const makeVariant = ({ action, custom, label, questions }) => {
   };
 };
 
+// Short title for the saved-sessions panel.
+const shorten = (text, n = 44) => {
+  const t = (text || "").trim().replace(/\s+/g, " ");
+  return t.length > n ? t.slice(0, n) + "…" : t;
+};
+
 export default function App() {
   const [messages, setMessages] = useState([]); // { id, role, content }
   const [chatLoading, setChatLoading] = useState(false);
 
-  // Active selection: { selectedText, sourceMessageText, rect }
+  // Active selection: { selectedText, sourceMessageText, rect, origin }
   const [selection, setSelection] = useState(null);
 
-  // The action modal: null when closed, else a navigable stack of frames.
-  //   frame = { id, selectedText, sourceMessageText, variants, order, activeKey }
+  // Saved modal sessions (in-memory only — a reload clears everything).
+  //   session = { id, title, label, createdAt, frames, index }
+  //   frame   = { id, selectedText, sourceMessageText, variants, order, activeKey }
   //   variant = { key, kind, action, custom, label, status, text, error }
-  // Breadcrumbs (frames) = drill-down depth; variants = different lenses on the
-  // same snippet (toggle between them without re-asking).
-  const [modal, setModal] = useState(null);
+  // A session is one thing you selected in chat; frames are drill-down depth
+  // (breadcrumbs); variants are different lenses on the same snippet.
+  const [sessions, setSessions] = useState([]);
+  // Which session is open in the modal (null = modal closed).
+  const [activeId, setActiveId] = useState(null);
+  const [panelCollapsed, setPanelCollapsed] = useState(true);
 
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
-  const modalRef = useRef(modal);
-  modalRef.current = modal;
+  const sessionsRef = useRef(sessions);
+  sessionsRef.current = sessions;
+  const activeIdRef = useRef(activeId);
+  activeIdRef.current = activeId;
 
   const abortRef = useRef(null); // chat stream
   const actionAbortRef = useRef(null); // modal action stream
+
+  const activeSession = sessions.find((s) => s.id === activeId) || null;
+
+  // Update one frame's variant within a session (fn receives the prev variant).
+  const updateFrameVariant = useCallback((sessionId, frameId, key, fn) => {
+    setSessions((ss) =>
+      ss.map((s) =>
+        s.id !== sessionId
+          ? s
+          : {
+              ...s,
+              frames: s.frames.map((f) =>
+                f.id !== frameId
+                  ? f
+                  : {
+                      ...f,
+                      variants: { ...f.variants, [key]: fn(f.variants[key]) },
+                    }
+              ),
+            }
+      )
+    );
+  }, []);
+
+  const patchFrameVariant = useCallback(
+    (sessionId, frameId, key, patch) =>
+      updateFrameVariant(sessionId, frameId, key, (v) => ({ ...v, ...patch })),
+    [updateFrameVariant]
+  );
 
   // Detect a text selection inside an assistant message OR the modal body.
   useEffect(() => {
@@ -64,13 +106,18 @@ export default function App() {
         sel.anchorNode?.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
       const rect = sel.getRangeAt(0).getBoundingClientRect();
 
-      // Inside the modal: source is the explanation currently shown.
+      // Inside the modal: source is the explanation currently shown (drill-down).
       if (anchorEl?.closest?.("[data-modal-body]")) {
-        const m = modalRef.current;
-        if (m) {
-          const frame = m.frames[m.index];
+        const s = sessionsRef.current.find((x) => x.id === activeIdRef.current);
+        if (s) {
+          const frame = s.frames[s.index];
           const v = frame.variants[frame.activeKey];
-          setSelection({ selectedText: text, sourceMessageText: v?.text || "", rect });
+          setSelection({
+            selectedText: text,
+            sourceMessageText: v?.text || "",
+            rect,
+            origin: "modal",
+          });
         }
         return;
       }
@@ -87,10 +134,27 @@ export default function App() {
         setSelection(null);
         return;
       }
-      setSelection({ selectedText: text, sourceMessageText: source.content, rect });
+      setSelection({
+        selectedText: text,
+        sourceMessageText: source.content,
+        rect,
+        origin: "chat",
+      });
     }
     document.addEventListener("mouseup", onMouseUp);
     return () => document.removeEventListener("mouseup", onMouseUp);
+  }, []);
+
+  // ⌘. (or Ctrl+.) toggles the saved-sessions panel.
+  useEffect(() => {
+    function onKey(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === ".") {
+        e.preventDefault();
+        setPanelCollapsed((c) => !c);
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
   }, []);
 
   const handleSend = useCallback(async (prompt) => {
@@ -144,143 +208,79 @@ export default function App() {
 
   const handleStop = useCallback(() => abortRef.current?.abort(), []);
 
-  // Stream an action result into a specific frame's variant (by frame id + key).
-  const streamIntoVariant = useCallback(async (frameId, key, payload) => {
-    const setVariant = (patch) =>
-      setModal((m) =>
-        m
-          ? {
-              ...m,
-              frames: m.frames.map((f) =>
-                f.id === frameId
-                  ? {
-                      ...f,
-                      variants: {
-                        ...f.variants,
-                        [key]: { ...f.variants[key], ...patch },
-                      },
-                    }
-                  : f
-              ),
-            }
-          : m
-      );
-
-    const controller = new AbortController();
-    actionAbortRef.current = controller;
-    try {
-      await streamAction(
-        payload,
-        (chunk) =>
-          setModal((m) =>
-            m
-              ? {
-                  ...m,
-                  frames: m.frames.map((f) =>
-                    f.id === frameId
-                      ? {
-                          ...f,
-                          variants: {
-                            ...f.variants,
-                            [key]: {
-                              ...f.variants[key],
-                              status: "streaming",
-                              text: f.variants[key].text + chunk,
-                            },
-                          },
-                        }
-                      : f
-                  ),
-                }
-              : m
-          ),
-        controller.signal
-      );
-      setVariant({ status: "done" });
-    } catch (err) {
-      if (err.name === "AbortError") {
-        setModal((m) =>
-          m
-            ? {
-                ...m,
-                frames: m.frames.map((f) =>
-                  f.id === frameId
-                    ? {
-                        ...f,
-                        variants: {
-                          ...f.variants,
-                          [key]: {
-                            ...f.variants[key],
-                            status: "done",
-                            text: f.variants[key].text || "*(stopped)*",
-                          },
-                        },
-                      }
-                    : f
-                ),
-              }
-            : m
+  // Stream an action result into a specific session/frame variant.
+  const streamIntoVariant = useCallback(
+    async (sessionId, frameId, key, payload) => {
+      const controller = new AbortController();
+      actionAbortRef.current = controller;
+      try {
+        await streamAction(
+          payload,
+          (chunk) =>
+            updateFrameVariant(sessionId, frameId, key, (v) => ({
+              ...v,
+              status: "streaming",
+              text: v.text + chunk,
+            })),
+          controller.signal
         );
-      } else {
-        setVariant({ status: "error", error: err.message });
+        patchFrameVariant(sessionId, frameId, key, { status: "done" });
+      } catch (err) {
+        if (err.name === "AbortError") {
+          updateFrameVariant(sessionId, frameId, key, (v) => ({
+            ...v,
+            status: "done",
+            text: v.text || "*(stopped)*",
+          }));
+        } else {
+          patchFrameVariant(sessionId, frameId, key, {
+            status: "error",
+            error: err.message,
+          });
+        }
+      } finally {
+        if (actionAbortRef.current === controller) actionAbortRef.current = null;
       }
-    } finally {
-      if (actionAbortRef.current === controller) actionAbortRef.current = null;
-    }
-  }, []);
-
-  // Merge a patch into a specific frame's variant.
-  const patchVariantState = useCallback(
-    (frameId, key, patch) =>
-      setModal((m) =>
-        m
-          ? {
-              ...m,
-              frames: m.frames.map((f) =>
-                f.id === frameId
-                  ? {
-                      ...f,
-                      variants: {
-                        ...f.variants,
-                        [key]: { ...f.variants[key], ...patch },
-                      },
-                    }
-                  : f
-              ),
-            }
-          : m
-      ),
-    []
+    },
+    [updateFrameVariant, patchFrameVariant]
   );
 
   // Fetch suggested questions into a frame's questions-variant (non-streaming).
   const runQuestions = useCallback(
-    async (frameId, key, payload) => {
+    async (sessionId, frameId, key, payload) => {
       try {
         const { questions } = await fetchQuestions(payload);
-        patchVariantState(frameId, key, { status: "done", questions: questions || [] });
+        patchFrameVariant(sessionId, frameId, key, {
+          status: "done",
+          questions: questions || [],
+        });
       } catch (err) {
-        patchVariantState(frameId, key, { status: "error", error: err.message });
+        patchFrameVariant(sessionId, frameId, key, {
+          status: "error",
+          error: err.message,
+        });
       }
     },
-    [patchVariantState]
+    [patchFrameVariant]
   );
 
   // Kick off the right backend call for a variant (questions vs streamed action).
   const runVariant = useCallback(
-    (frameId, payload, snippet) => {
+    (sessionId, frameId, payload, snippet) => {
       const key = variantKey(payload);
-      if (payload.questions) return runQuestions(frameId, key, snippet);
-      return streamIntoVariant(frameId, key, { ...payload, ...snippet });
+      if (payload.questions)
+        return runQuestions(sessionId, frameId, key, snippet);
+      return streamIntoVariant(sessionId, frameId, key, { ...payload, ...snippet });
     },
     [runQuestions, streamIntoVariant]
   );
 
-  // From a selection (chat or modal body): push a NEW frame (drill-down).
+  // From a selection: start a NEW session (chat origin) or push a drill-down
+  // frame onto the active session (modal origin).
   const handleAction = useCallback(
     async (payload) => {
       if (!selection) return;
-      const { selectedText, sourceMessageText } = selection;
+      const { selectedText, sourceMessageText, origin } = selection;
       const frameId = ++nextId;
       const variant = makeVariant(payload);
       const key = variant.key;
@@ -293,14 +293,37 @@ export default function App() {
         selectedOrder: [key], // chip display order, most-recently-clicked first
         activeKey: key,
       };
-      setModal((m) => {
-        if (!m) return { frames: [frame], index: 0 };
-        const frames = [...m.frames.slice(0, m.index + 1), frame];
-        return { frames, index: frames.length - 1 };
-      });
+
+      let sessionId;
+      if (origin === "modal" && activeIdRef.current != null) {
+        // Drill-down: append a frame to the active session (truncating any
+        // forward frames from the current position).
+        sessionId = activeIdRef.current;
+        setSessions((ss) =>
+          ss.map((s) => {
+            if (s.id !== sessionId) return s;
+            const kept = s.frames.slice(0, s.index + 1);
+            return { ...s, frames: [...kept, frame], index: kept.length };
+          })
+        );
+      } else {
+        // New session, appended so the latest sits at the bottom of the panel.
+        sessionId = ++nextId;
+        const session = {
+          id: sessionId,
+          title: shorten(selectedText),
+          label: variant.label,
+          createdAt: Date.now(),
+          frames: [frame],
+          index: 0,
+        };
+        setSessions((ss) => [...ss, session]);
+        setActiveId(sessionId);
+      }
+
       setSelection(null);
       window.getSelection()?.removeAllRanges();
-      await runVariant(frameId, payload, { selectedText, sourceMessageText });
+      await runVariant(sessionId, frameId, payload, { selectedText, sourceMessageText });
     },
     [selection, runVariant]
   );
@@ -309,51 +332,62 @@ export default function App() {
   // If that variant already exists, just switch to it (cached, instant).
   const handleVariant = useCallback(
     async (payload) => {
-      const m = modalRef.current;
-      if (!m) return;
-      const frame = m.frames[m.index];
+      const sessionId = activeIdRef.current;
+      const s = sessionsRef.current.find((x) => x.id === sessionId);
+      if (!s) return;
+      const frame = s.frames[s.index];
       const key = variantKey(payload);
 
       if (frame.variants[key]) {
-        setModal((mm) =>
-          mm
-            ? {
-                ...mm,
-                frames: mm.frames.map((f) =>
-                  f.id === frame.id
-                    ? {
-                        ...f,
-                        activeKey: key,
-                        selectedOrder: [key, ...f.selectedOrder.filter((k) => k !== key)],
-                      }
-                    : f
-                ),
-              }
-            : mm
+        setSessions((ss) =>
+          ss.map((x) =>
+            x.id !== sessionId
+              ? x
+              : {
+                  ...x,
+                  frames: x.frames.map((f) =>
+                    f.id !== frame.id
+                      ? f
+                      : {
+                          ...f,
+                          activeKey: key,
+                          selectedOrder: [
+                            key,
+                            ...f.selectedOrder.filter((k) => k !== key),
+                          ],
+                        }
+                  ),
+                }
+          )
         );
         return;
       }
 
       const variant = makeVariant(payload);
-      setModal((mm) =>
-        mm
-          ? {
-              ...mm,
-              frames: mm.frames.map((f) =>
-                f.id === frame.id
-                  ? {
-                      ...f,
-                      variants: { ...f.variants, [key]: variant },
-                      order: [...f.order, key],
-                      selectedOrder: [key, ...f.selectedOrder.filter((k) => k !== key)],
-                      activeKey: key,
-                    }
-                  : f
-              ),
-            }
-          : mm
+      setSessions((ss) =>
+        ss.map((x) =>
+          x.id !== sessionId
+            ? x
+            : {
+                ...x,
+                frames: x.frames.map((f) =>
+                  f.id !== frame.id
+                    ? f
+                    : {
+                        ...f,
+                        variants: { ...f.variants, [key]: variant },
+                        order: [...f.order, key],
+                        selectedOrder: [
+                          key,
+                          ...f.selectedOrder.filter((k) => k !== key),
+                        ],
+                        activeKey: key,
+                      }
+                ),
+              }
+        )
       );
-      await runVariant(frame.id, payload, {
+      await runVariant(sessionId, frame.id, payload, {
         selectedText: frame.selectedText,
         sourceMessageText: frame.sourceMessageText,
       });
@@ -362,14 +396,24 @@ export default function App() {
   );
 
   const handleNavigate = useCallback((index) => {
-    setModal((m) => (m ? { ...m, index } : m));
+    const sessionId = activeIdRef.current;
+    setSessions((ss) => ss.map((s) => (s.id === sessionId ? { ...s, index } : s)));
   }, []);
 
   const handleStopAction = useCallback(() => actionAbortRef.current?.abort(), []);
 
+  // Close the modal but keep the session in the panel.
   const handleCloseModal = useCallback(() => {
     actionAbortRef.current?.abort();
-    setModal(null);
+    setActiveId(null);
+  }, []);
+
+  const handleOpenSession = useCallback((id) => setActiveId(id), []);
+
+  const handleDeleteSession = useCallback((id) => {
+    if (id === activeIdRef.current) actionAbortRef.current?.abort();
+    setSessions((ss) => ss.filter((s) => s.id !== id));
+    setActiveId((cur) => (cur === id ? null : cur));
   }, []);
 
   return (
@@ -378,16 +422,26 @@ export default function App() {
         <h1>learnmaxx</h1>
         <span className="hint">highlight any part of a reply to ask about it →</span>
       </header>
-      <ChatView
-        messages={messages}
-        loading={chatLoading}
-        onSend={handleSend}
-        onStop={handleStop}
-      />
+      <div className="app-main">
+        <SessionPanel
+          sessions={sessions}
+          activeId={activeId}
+          collapsed={panelCollapsed}
+          onToggle={() => setPanelCollapsed((c) => !c)}
+          onOpen={handleOpenSession}
+          onDelete={handleDeleteSession}
+        />
+        <ChatView
+          messages={messages}
+          loading={chatLoading}
+          onSend={handleSend}
+          onStop={handleStop}
+        />
+      </div>
       {selection && <SelectionPopup rect={selection.rect} onAction={handleAction} />}
-      {modal && (
+      {activeSession && (
         <ActionModal
-          modal={modal}
+          modal={activeSession}
           onClose={handleCloseModal}
           onNavigate={handleNavigate}
           onVariant={handleVariant}

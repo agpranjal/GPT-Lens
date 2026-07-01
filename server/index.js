@@ -89,17 +89,31 @@ app.post("/api/chat", async (req, res) => {
 });
 
 // Selection action, streamed. Body: { action, selectedText, sourceMessageText, custom?, model?, reasoning? }
+// Follow-up (continuing the same lens's chat): also pass
+// { history: [{role,content}, ...], question } — history is the prior
+// exchange (starting with the lens's own answer), question is the new turn.
+// The seed prompt is rebuilt identically from action/custom/selectedText/
+// sourceMessageText so continuation always has the exact original context.
 app.post("/api/action", async (req, res) => {
   try {
-    const { action, selectedText, sourceMessageText, custom } = req.body || {};
+    const { action, selectedText, sourceMessageText, custom, history, question } =
+      req.body || {};
     if (!selectedText || !sourceMessageText) {
       return res
         .status(400)
         .json({ error: "selectedText and sourceMessageText are required" });
     }
     const instruction = resolveInstruction({ action, custom });
-    const prompt = buildActionPrompt({ sourceMessageText, selectedText, instruction });
-    await pipeStream(res, generateStream(prompt, resolveOpts(req.body)));
+    const seedPrompt = buildActionPrompt({ sourceMessageText, selectedText, instruction });
+
+    const stream =
+      Array.isArray(history) && question
+        ? chatStream(
+            [{ role: "user", content: seedPrompt }, ...history, { role: "user", content: question }],
+            resolveOpts(req.body)
+          )
+        : generateStream(seedPrompt, resolveOpts(req.body));
+    await pipeStream(res, stream);
   } catch (err) {
     handleStreamError(res, err, "/api/action");
   }

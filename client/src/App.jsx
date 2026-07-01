@@ -26,6 +26,9 @@ const makeVariant = ({ action, custom, label, questions }) => {
     text: "",
     error: "",
     questions: [],
+    // Follow-up chat continuing THIS lens's answer — persists per-variant, so
+    // switching chips and coming back keeps the thread where it was left.
+    followUps: [], // { id, question, answer, status, error }
   };
 };
 
@@ -409,6 +412,83 @@ export default function App() {
     setSessions((ss) => ss.map((s) => (s.id === sessionId ? { ...s, index } : s)));
   }, []);
 
+  // Continue the CURRENT lens's chat with a follow-up question. Unlike a
+  // chip (a fresh lens with no memory), this sends the full prior exchange —
+  // the lens's own answer plus every completed follow-up — so the model
+  // remembers what was already said.
+  const handleAskFollowUp = useCallback(
+    async (text) => {
+      const sessionId = activeIdRef.current;
+      const s = sessionsRef.current.find((x) => x.id === sessionId);
+      if (!s) return;
+      const frame = s.frames[s.index];
+      const key = frame.activeKey;
+      const variant = frame.variants[key];
+      if (!variant || variant.kind === "questions") return;
+
+      const followUpId = ++nextId;
+      const history = [
+        { role: "assistant", content: variant.text },
+        ...variant.followUps
+          .filter((f) => f.status === "done")
+          .flatMap((f) => [
+            { role: "user", content: f.question },
+            { role: "assistant", content: f.answer },
+          ]),
+      ];
+
+      updateFrameVariant(sessionId, frame.id, key, (v) => ({
+        ...v,
+        followUps: [...v.followUps, { id: followUpId, question: text, answer: "", status: "loading", error: "" }],
+      }));
+
+      const setFollowUp = (patch) =>
+        updateFrameVariant(sessionId, frame.id, key, (v) => ({
+          ...v,
+          followUps: v.followUps.map((f) => (f.id === followUpId ? { ...f, ...patch } : f)),
+        }));
+
+      const controller = new AbortController();
+      actionAbortRef.current = controller;
+      try {
+        await streamAction(
+          {
+            action: variant.action,
+            custom: variant.custom,
+            selectedText: frame.selectedText,
+            sourceMessageText: frame.sourceMessageText,
+            history,
+            question: text,
+          },
+          llmOptsRef.current,
+          (chunk) =>
+            updateFrameVariant(sessionId, frame.id, key, (v) => ({
+              ...v,
+              followUps: v.followUps.map((f) =>
+                f.id === followUpId ? { ...f, status: "streaming", answer: f.answer + chunk } : f
+              ),
+            })),
+          controller.signal
+        );
+        setFollowUp({ status: "done" });
+      } catch (err) {
+        if (err.name === "AbortError") {
+          updateFrameVariant(sessionId, frame.id, key, (v) => ({
+            ...v,
+            followUps: v.followUps.map((f) =>
+              f.id === followUpId ? { ...f, status: "done", answer: f.answer || "*(stopped)*" } : f
+            ),
+          }));
+        } else {
+          setFollowUp({ status: "error", error: err.message });
+        }
+      } finally {
+        if (actionAbortRef.current === controller) actionAbortRef.current = null;
+      }
+    },
+    [updateFrameVariant]
+  );
+
   const handleStopAction = useCallback(() => actionAbortRef.current?.abort(), []);
 
   // Close the modal but keep the session in the panel.
@@ -429,7 +509,6 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <h1>skillmaxx</h1>
-        <span className="hint">highlight any part of a reply to ask about it →</span>
         <ModelSelector
           models={modelOptions.models}
           reasoningLevels={modelOptions.reasoningLevels}
@@ -463,6 +542,7 @@ export default function App() {
           onClose={handleCloseModal}
           onNavigate={handleNavigate}
           onVariant={handleVariant}
+          onAskFollowUp={handleAskFollowUp}
           onStop={handleStopAction}
         />
       )}

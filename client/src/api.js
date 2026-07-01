@@ -33,16 +33,17 @@ export function streamChat(messages, llmOpts, onChunk, signal) {
   return stream("/api/chat", { messages, ...llmOpts }, onChunk, signal);
 }
 
-// action: key string; custom: optional free-text instruction
+// action: key string; custom: optional free-text instruction.
+// history/question: optional — continues that lens's chat (see server/index.js).
 export function streamAction(
-  { action, custom, selectedText, sourceMessageText },
+  { action, custom, selectedText, sourceMessageText, history, question },
   llmOpts,
   onChunk,
   signal
 ) {
   return stream(
     "/api/action",
-    { action, custom, selectedText, sourceMessageText, ...llmOpts },
+    { action, custom, selectedText, sourceMessageText, history, question, ...llmOpts },
     onChunk,
     signal
   );

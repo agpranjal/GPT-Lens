@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Markdown from "./Markdown.jsx";
 import Dots from "./Dots.jsx";
 import { ACTIONS, QUESTIONS_KEY } from "../actions.js";
@@ -11,28 +11,61 @@ function shorten(text, n = 28) {
 // Modal showing a navigable stack of selection-action explanations.
 // - Breadcrumbs (top) = drill-down depth (different snippets).
 // - Chip row = different lenses on the SAME snippet; click to generate/switch.
-export default function ActionModal({ modal, onClose, onNavigate, onVariant, onStop }) {
+// - Follow-up box (bottom) = continue chatting about the CURRENT lens; the
+//   thread is stored on the variant itself, so it persists across chip switches.
+export default function ActionModal({ modal, onClose, onNavigate, onVariant, onAskFollowUp, onStop }) {
   const { frames, index } = modal;
   const frame = frames[index];
   const current = frame.variants[frame.activeKey];
   const streaming = current.status === "loading" || current.status === "streaming";
+  const followUpStreaming = current.followUps?.some(
+    (f) => f.status === "loading" || f.status === "streaming"
+  );
+  const anyStreaming = streaming || followUpStreaming;
   const [custom, setCustom] = useState("");
+  const [followUp, setFollowUp] = useState("");
+  const [followUpOpen, setFollowUpOpen] = useState(false);
+  const followUpInputRef = useRef(null);
+  const dockRef = useRef(null);
 
-  // Escape closes; ←/→ move between frames (unless typing in the chip input).
+  function closeFollowUp() {
+    setFollowUpOpen(false);
+    followUpInputRef.current?.blur();
+  }
+
+  // Clear/collapse the follow-up box when switching frames/lenses — it was
+  // meant for a different context.
+  useEffect(() => {
+    setFollowUp("");
+    setFollowUpOpen(false);
+  }, [frame.id, frame.activeKey]);
+
+  useEffect(() => {
+    if (followUpOpen) followUpInputRef.current?.focus();
+  }, [followUpOpen]);
+
+  // Escape closes the follow-up box if open, else the modal; "/" opens the
+  // follow-up box; ←/→ move between frames (unless typing in an input).
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Escape") {
-        onClose();
+        if (followUpOpen) closeFollowUp();
+        else onClose();
         return;
       }
       const tag = e.target.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (e.key === "/" && !followUpOpen && current.kind !== "questions") {
+        e.preventDefault();
+        setFollowUpOpen(true);
+        return;
+      }
       if (e.key === "ArrowLeft" && index > 0) onNavigate(index - 1);
       else if (e.key === "ArrowRight" && index < frames.length - 1) onNavigate(index + 1);
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose, onNavigate, index, frames.length]);
+  }, [onClose, onNavigate, index, frames.length, followUpOpen, current.kind]);
 
   // Custom variants created on this frame (in creation order), for chips.
   const customKeys = frame.order.filter((k) => frame.variants[k]?.kind === "custom");
@@ -86,9 +119,28 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
     setCustom("");
   }
 
+  function submitFollowUp(e) {
+    e.preventDefault();
+    const text = followUp.trim();
+    if (!text || anyStreaming) return;
+    onAskFollowUp(text);
+    setFollowUp("");
+    closeFollowUp();
+  }
+
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
-      <div className="modal" onMouseDown={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          // Click anywhere in the modal other than the follow-up dock itself
+          // closes the follow-up box (it stays open only for deliberate typing).
+          if (followUpOpen && dockRef.current && !dockRef.current.contains(e.target)) {
+            closeFollowUp();
+          }
+        }}
+      >
         <header className="modal-header">
           <nav className="modal-breadcrumbs">
             {frames.map((f, i) => (
@@ -105,7 +157,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
             ))}
           </nav>
           <div className="modal-actions">
-            {streaming && (
+            {anyStreaming && (
               <button className="modal-stop" onClick={onStop}>
                 Stop
               </button>
@@ -166,9 +218,49 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onS
                   </div>
                 )
               : (current.status === "streaming" || current.status === "done") && (
-                  <Markdown>{current.text || ""}</Markdown>
+                  <>
+                    <Markdown>{current.text || ""}</Markdown>
+                    {current.followUps?.map((f) => (
+                      <div key={f.id} className="followup">
+                        <div className="followup-q">{f.question}</div>
+                        <div className="followup-a">
+                          {f.status === "loading" && <Dots />}
+                          {f.status === "error" && <div className="error">⚠️ {f.error}</div>}
+                          {(f.status === "streaming" || f.status === "done") && (
+                            <Markdown>{f.answer || ""}</Markdown>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </>
                 )}
           </div>
+
+          {current.kind !== "questions" && (
+            <div ref={dockRef} className={`followup-dock${followUpOpen ? " open" : ""}`}>
+              <button
+                type="button"
+                className="followup-fab"
+                onClick={() => setFollowUpOpen(true)}
+                title="Ask a follow-up (/)"
+                aria-label="Ask a follow-up"
+              >
+                💬
+              </button>
+              <form className="modal-followup" onSubmit={submitFollowUp}>
+                <input
+                  ref={followUpInputRef}
+                  value={followUp}
+                  onChange={(e) => setFollowUp(e.target.value)}
+                  placeholder="Ask a follow-up…"
+                  disabled={anyStreaming}
+                />
+                <button type="submit" disabled={anyStreaming || !followUp.trim()}>
+                  Send
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </div>

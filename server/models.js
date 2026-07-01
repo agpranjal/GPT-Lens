@@ -33,7 +33,7 @@ export const REASONING_LEVELS = [
 
 export const DEFAULT_MODEL = MODELS.some((m) => m.id === process.env.OPENROUTER_MODEL)
   ? process.env.OPENROUTER_MODEL
-  : process.env.OPENROUTER_MODEL || MODELS[5].id; // gpt-5.1
+  : process.env.OPENROUTER_MODEL || MODELS[1].id; // gpt-5.2
 
 export const DEFAULT_REASONING = REASONING_LEVELS.some((r) => r.id === process.env.OPENROUTER_REASONING)
   ? process.env.OPENROUTER_REASONING

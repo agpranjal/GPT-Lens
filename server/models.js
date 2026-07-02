@@ -13,6 +13,7 @@ export const MODELS = [
   { id: "openai/gpt-5.1", label: "GPT-5.1", tier: "Balanced", price: "$1.25 / $10 per M" },
   { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", tier: "Balanced", price: "$1.25 / $10 per M" },
   { id: "deepseek/deepseek-v4-pro", label: "DeepSeek V4 Pro", tier: "Balanced", price: "$0.43 / $0.87 per M" },
+  { id: "minimax/minimax-m3", label: "MiniMax M3", tier: "Balanced", price: "$0.30 / $1.20 per M" },
 
   // Fast & cheap — still solid for short explanations.
   { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", tier: "Fast & cheap", price: "$0.30 / $2.50 per M" },
@@ -20,6 +21,7 @@ export const MODELS = [
   { id: "openai/gpt-5-mini", label: "GPT-5 Mini", tier: "Fast & cheap", price: "$0.25 / $2 per M" },
   { id: "deepseek/deepseek-v4-flash", label: "DeepSeek V4 Flash", tier: "Fast & cheap", price: "$0.10 / $0.20 per M" },
   { id: "openai/gpt-oss-120b", label: "GPT-OSS 120B", tier: "Fast & cheap", price: "$0.03 / $0.15 per M" },
+  { id: "minimax/minimax-m2.5", label: "MiniMax M2.5", tier: "Fast & cheap", price: "$0.12 / $0.48 per M" },
 ];
 
 // Reasoning-token budget presets (mapped to OpenRouter's unified `reasoning`

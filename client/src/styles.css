@@ -70,6 +70,19 @@ body {
 .reasoning-select:hover { border-color: var(--accent); }
 .reasoning-select { max-width: 130px; }
 
+/* ---- selection highlight overlay ---- */
+/* Mirrors the browser highlight while the action popup is open; stays visible
+   when focus moves into the popup's input. Above the modal (100), below the
+   popup (200), and transparent to the mouse. */
+.selection-highlight { pointer-events: none; }
+.selection-highlight-rect {
+  position: fixed;
+  z-index: 150;
+  background: rgba(138, 180, 248, 0.28);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
 /* ---- chat ---- */
 .chat-view {
   display: flex;
@@ -129,8 +142,12 @@ body {
   margin: 0 auto;
   padding: 8px 20px 22px;
   display: flex;
-  gap: 10px;
-  align-items: flex-end;
+}
+/* pill wrapping the textarea, with the send/stop button docked inside */
+.composer-box {
+  position: relative;
+  flex: 1;
+  display: flex;
 }
 .composer textarea {
   flex: 1;
@@ -139,24 +156,34 @@ body {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 24px;
-  padding: 13px 18px;
+  padding: 13px 56px 13px 18px; /* room for the round button on the right */
   font: inherit;
   max-height: 200px;
+  overflow-y: auto;
   outline: none;
 }
 .composer textarea::placeholder { color: var(--muted); }
-.composer button {
+/* round icon button (↑ to send, ■ to stop), pinned to the pill's bottom-right
+   so it stays put as the box grows */
+.composer-btn {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: var(--text);
   color: var(--bg);
   border: none;
-  border-radius: 20px;
-  padding: 11px 20px;
+  border-radius: 50%;
   cursor: pointer;
-  font: inherit;
-  font-weight: 600;
+  transition: opacity 0.15s ease, transform 0.1s ease;
 }
-.composer button:disabled { opacity: 0.35; cursor: default; }
-.composer .stop-btn {
+.composer-btn:hover:not(:disabled) { transform: scale(1.05); }
+.composer-btn:disabled { opacity: 0.35; cursor: default; }
+.composer-btn.stop {
   background: #c84b4b;
   color: #fff;
 }
@@ -641,21 +668,22 @@ body {
 }
 .markdown hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
 
-/* ---- saved-sessions side panel ---- */
-.session-panel {
+/* ---- collapsible side panels (chats left, saved sessions right) ---- */
+.side-panel {
   flex-shrink: 0;
   position: relative;
   width: 280px;
   background: var(--modal); /* distinct surface from the chat area behind it */
-  border-right: 1px solid var(--border);
   overflow: hidden;
   transition: width 0.22s ease, background-color 0.15s ease;
 }
+.side-panel.left { border-right: 1px solid var(--border); }
+.side-panel.right { border-left: 1px solid var(--border); }
 /* collapsed: a slim vertical strip that keeps the panel's edge visible */
-.session-panel.collapsed { width: 44px; }
-.session-panel.collapsed:hover { background: #313131; }
+.side-panel.collapsed { width: 44px; }
+.side-panel.collapsed:hover { background: #313131; }
 @media (prefers-reduced-motion: reduce) {
-  .session-panel { transition: none; }
+  .side-panel { transition: none; }
 }
 
 /* rail: pinned icon, fades out as the panel slides open */
@@ -671,8 +699,8 @@ body {
   transition: opacity 0.15s ease;
   pointer-events: none;
 }
-.session-panel.collapsed .panel-rail { opacity: 1; }
-.session-panel:not(.collapsed) .panel-rail { opacity: 0; }
+.side-panel.collapsed .panel-rail { opacity: 1; }
+.side-panel:not(.collapsed) .panel-rail { opacity: 0; }
 /* sidebar glyph on the collapsed strip; count sits as a badge on its corner */
 .panel-toggle {
   position: relative;
@@ -684,7 +712,7 @@ body {
   line-height: 0;
   transition: color 0.15s ease;
 }
-.session-panel.collapsed:hover .panel-toggle { color: var(--text); }
+.side-panel.collapsed:hover .panel-toggle { color: var(--text); }
 
 /* body: full panel content, fades/slides in as it opens */
 .panel-body {
@@ -696,10 +724,22 @@ body {
   transform: translateX(-8px);
   transition: opacity 0.18s ease 0.05s, transform 0.18s ease 0.05s;
 }
-.session-panel:not(.collapsed) .panel-body {
+.side-panel.right .panel-body { transform: translateX(8px); }
+.side-panel:not(.collapsed) .panel-body {
   opacity: 1;
   transform: translateX(0);
 }
+/* "+ New" button in the chats panel header */
+.panel-new {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.panel-new:hover { border-color: var(--accent); color: var(--accent); }
 .panel-count {
   position: absolute;
   top: 2px;

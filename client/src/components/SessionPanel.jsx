@@ -1,5 +1,4 @@
-// Collapsible left rail listing saved modal sessions (newest first).
-// Sessions live only in memory — a page reload clears them.
+// Collapsible right rail listing the current chat's saved modal sessions.
 // Slides open on hover, slides shut when the pointer leaves.
 
 // A panel/sidebar glyph shown on the collapsed strip.
@@ -33,7 +32,7 @@ export default function SessionPanel({
 }) {
   return (
     <aside
-      className={`session-panel${collapsed ? " collapsed" : ""}`}
+      className={`side-panel right${collapsed ? " collapsed" : ""}`}
       onMouseEnter={onExpand}
       onMouseLeave={onCollapse}
     >

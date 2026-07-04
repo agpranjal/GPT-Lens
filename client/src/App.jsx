@@ -3,11 +3,25 @@ import ChatView from "./components/ChatView.jsx";
 import SelectionPopup from "./components/SelectionPopup.jsx";
 import ActionModal from "./components/ActionModal.jsx";
 import SessionPanel from "./components/SessionPanel.jsx";
+import ChatPanel from "./components/ChatPanel.jsx";
 import ModelSelector from "./components/ModelSelector.jsx";
-import { streamChat, streamAction, fetchQuestions, fetchModels } from "./api.js";
+import {
+  streamChat,
+  streamAction,
+  fetchQuestions,
+  fetchModels,
+  fetchChats,
+  createChat,
+  fetchChat,
+  deleteChat,
+  saveSession,
+  deleteSessionApi,
+} from "./api.js";
 import { QUESTIONS_KEY } from "./actions.js";
 
-let nextId = 0;
+// Seeded from the clock so ids never collide with ones persisted by an
+// earlier page load (plain ++ from 0 would repeat after a reload).
+let nextId = Date.now();
 
 // Stable key for a variant: questions, custom:<text>, or the action instruction.
 const variantKey = ({ action, custom, questions }) =>
@@ -42,11 +56,23 @@ export default function App() {
   const [messages, setMessages] = useState([]); // { id, role, content }
   const [chatLoading, setChatLoading] = useState(false);
 
+  // Stored chats (left rail). `chatId` is the open chat's DB id; null means a
+  // fresh chat that gets created in the DB on the first send.
+  const [chats, setChats] = useState([]);
+  const [chatId, setChatId] = useState(null);
+  const [chatPanelCollapsed, setChatPanelCollapsed] = useState(true);
+  const chatIdRef = useRef(chatId);
+  chatIdRef.current = chatId;
+
   // Active selection: { selectedText, sourceMessageText, rect, origin }
   const [selection, setSelection] = useState(null);
 
-  // Saved modal sessions (in-memory only — a reload clears everything).
-  //   session = { id, title, label, createdAt, frames, index }
+  // Bumped whenever the composer should grab focus (new chat, chat open, "/").
+  const [focusToken, setFocusToken] = useState(0);
+  const focusComposer = useCallback(() => setFocusToken((t) => t + 1), []);
+
+  // Saved modal sessions for the OPEN chat (persisted to SQLite, scoped per chat).
+  //   session = { id, chatId, title, label, createdAt, frames, index }
   //   frame   = { id, selectedText, sourceMessageText, variants, order, activeKey }
   //   variant = { key, kind, action, custom, label, status, text, error }
   // A session is one thing you selected in chat; frames are drill-down depth
@@ -76,6 +102,13 @@ export default function App() {
         );
       })
       .catch(() => {}); // dropdown just stays hidden if this fails
+  }, []);
+
+  // Load the stored-chats list once on mount.
+  useEffect(() => {
+    fetchChats()
+      .then(({ chats }) => setChats(chats))
+      .catch(() => {}); // rail just stays empty if the server is down
   }, []);
 
   // Persist the user's picks so they survive a reload.
@@ -129,9 +162,22 @@ export default function App() {
 
   // Detect a text selection inside an assistant message OR the modal body.
   useEffect(() => {
+    // Any press outside the popup dismisses it immediately — don't wait for
+    // mouseup to notice the selection is gone.
+    function onMouseDown(e) {
+      if (e.target.closest?.("[data-selection-popup]")) return;
+      setSelection(null);
+    }
+
     function onMouseUp(e) {
       if (e.target.closest?.("[data-selection-popup]")) return;
+      // Defer one tick: clicking ON highlighted text collapses the selection
+      // only AFTER mouseup fires, so reading it synchronously here would still
+      // see the old selection and resurrect the popup we just dismissed.
+      setTimeout(() => handleSelectionSettled(), 0);
+    }
 
+    function handleSelectionSettled() {
       const sel = window.getSelection();
       const text = sel?.toString().trim();
       if (!text || sel.isCollapsed) {
@@ -140,7 +186,11 @@ export default function App() {
       }
       const anchorEl =
         sel.anchorNode?.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
-      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      const range = sel.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      // Per-line rects for our own highlight overlay — the native highlight
+      // stops being painted once focus moves into the popup's input.
+      const highlightRects = Array.from(range.getClientRects());
 
       // Inside the modal: source is the explanation currently shown (drill-down).
       if (anchorEl?.closest?.("[data-modal-body]")) {
@@ -152,6 +202,7 @@ export default function App() {
             selectedText: text,
             sourceMessageText: v?.text || "",
             rect,
+            highlightRects,
             origin: "modal",
           });
         }
@@ -174,11 +225,16 @@ export default function App() {
         selectedText: text,
         sourceMessageText: source.content,
         rect,
+        highlightRects,
         origin: "chat",
       });
     }
+    document.addEventListener("mousedown", onMouseDown);
     document.addEventListener("mouseup", onMouseUp);
-    return () => document.removeEventListener("mouseup", onMouseUp);
+    return () => {
+      document.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
   }, []);
 
   const handleSend = useCallback(async (prompt) => {
@@ -191,6 +247,20 @@ export default function App() {
     ]);
     setChatLoading(true);
 
+    // First message of a fresh chat: create the DB row so the server can
+    // persist the exchange. If this fails the chat just stays unsaved.
+    let currentChatId = chatIdRef.current;
+    if (currentChatId == null) {
+      try {
+        const chat = await createChat(shorten(prompt, 60));
+        currentChatId = chat.id;
+        setChatId(chat.id);
+        setChats((cs) => [chat, ...cs]);
+      } catch {
+        currentChatId = null;
+      }
+    }
+
     const history = [...messagesRef.current, userMsg].map(({ role, content }) => ({
       role,
       content,
@@ -200,6 +270,7 @@ export default function App() {
     try {
       await streamChat(
         history,
+        currentChatId,
         llmOptsRef.current,
         (chunk) =>
           setMessages((prev) =>
@@ -228,10 +299,88 @@ export default function App() {
     } finally {
       setChatLoading(false);
       abortRef.current = null;
+      // Refresh the rail so titles/ordering reflect the latest activity.
+      fetchChats().then(({ chats }) => setChats(chats)).catch(() => {});
     }
   }, []);
 
   const handleStop = useCallback(() => abortRef.current?.abort(), []);
+
+  // ---- stored chats (left rail) ----
+
+  const resetToFreshChat = useCallback(() => {
+    abortRef.current?.abort();
+    actionAbortRef.current?.abort();
+    setMessages([]);
+    setSessions([]);
+    setActiveId(null);
+    setChatId(null);
+    focusComposer();
+  }, [focusComposer]);
+
+  const handleOpenChat = useCallback(
+    async (id) => {
+      if (id === chatIdRef.current) return;
+      abortRef.current?.abort();
+      actionAbortRef.current?.abort();
+      try {
+        const chat = await fetchChat(id);
+        setMessages(chat.messages);
+        setSessions(chat.sessions);
+        setActiveId(null);
+        setChatId(id);
+        focusComposer();
+      } catch (err) {
+        console.error("failed to open chat:", err);
+      }
+    },
+    [focusComposer]
+  );
+
+  const handleDeleteChat = useCallback(
+    (id) => {
+      // DB cascade removes the chat's sessions along with it.
+      deleteChat(id).catch(() => {});
+      setChats((cs) => cs.filter((c) => c.id !== id));
+      if (id === chatIdRef.current) resetToFreshChat();
+    },
+    [resetToFreshChat]
+  );
+
+  // Global shortcuts: cmd/ctrl+shift+O starts a new chat; "/" focuses the
+  // composer. With the modal open, "/" is left to the modal's own handler
+  // (it opens the floating follow-up box there).
+  useEffect(() => {
+    function onKey(e) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "o") {
+        e.preventDefault();
+        resetToFreshChat();
+        return;
+      }
+      // Esc dismisses the selection popup, even from inside its own input.
+      if (e.key === "Escape" && document.querySelector("[data-selection-popup]")) {
+        setSelection(null);
+        window.getSelection()?.removeAllRanges();
+        return;
+      }
+      if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        const tag = e.target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return;
+        // Selection popup showing → its "ask your own…" box wins.
+        const popupInput = document.querySelector("[data-selection-popup] input");
+        if (popupInput) {
+          e.preventDefault();
+          popupInput.focus();
+          return;
+        }
+        if (activeIdRef.current != null) return; // modal open — its handler owns "/"
+        e.preventDefault();
+        focusComposer();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [resetToFreshChat, focusComposer]);
 
   // Stream an action result into a specific session/frame variant.
   const streamIntoVariant = useCallback(
@@ -337,6 +486,7 @@ export default function App() {
         sessionId = ++nextId;
         const session = {
           id: sessionId,
+          chatId: chatIdRef.current, // owning chat; scopes the right rail + DB row
           title: shorten(selectedText),
           label: variant.label,
           createdAt: Date.now(),
@@ -505,6 +655,32 @@ export default function App() {
 
   const handleStopAction = useCallback(() => actionAbortRef.current?.abort(), []);
 
+  // ---- session persistence (write-through, debounced) ----
+  // Saves each session whenever it settles: skipped while anything inside is
+  // still streaming (the status flip to done/error re-triggers the effect).
+  const lastSavedRef = useRef(new Map()); // session.id -> last serialized form
+  useEffect(() => {
+    const t = setTimeout(() => {
+      for (const s of sessions) {
+        if (!s.chatId) continue; // chat row never got created; nothing to attach to
+        const busy = s.frames.some((f) =>
+          Object.values(f.variants).some(
+            (v) =>
+              v.status === "loading" ||
+              v.status === "streaming" ||
+              v.followUps?.some((fu) => fu.status === "loading" || fu.status === "streaming")
+          )
+        );
+        if (busy) continue;
+        const serialized = JSON.stringify(s);
+        if (lastSavedRef.current.get(s.id) === serialized) continue;
+        lastSavedRef.current.set(s.id, serialized);
+        saveSession(s).catch(() => lastSavedRef.current.delete(s.id)); // retry on next change
+      }
+    }, 600);
+    return () => clearTimeout(t);
+  }, [sessions]);
+
   // Close the modal but keep the session in the panel.
   const handleCloseModal = useCallback(() => {
     actionAbortRef.current?.abort();
@@ -517,6 +693,8 @@ export default function App() {
     if (id === activeIdRef.current) actionAbortRef.current?.abort();
     setSessions((ss) => ss.filter((s) => s.id !== id));
     setActiveId((cur) => (cur === id ? null : cur));
+    lastSavedRef.current.delete(id);
+    deleteSessionApi(id).catch(() => {});
   }, []);
 
   return (
@@ -533,6 +711,23 @@ export default function App() {
         />
       </header>
       <div className="app-main">
+        <ChatPanel
+          chats={chats}
+          activeId={chatId}
+          collapsed={chatPanelCollapsed}
+          onExpand={() => setChatPanelCollapsed(false)}
+          onCollapse={() => setChatPanelCollapsed(true)}
+          onNewChat={resetToFreshChat}
+          onOpen={handleOpenChat}
+          onDelete={handleDeleteChat}
+        />
+        <ChatView
+          messages={messages}
+          loading={chatLoading}
+          onSend={handleSend}
+          onStop={handleStop}
+          focusToken={focusToken}
+        />
         <SessionPanel
           sessions={sessions}
           activeId={activeId}
@@ -542,14 +737,23 @@ export default function App() {
           onOpen={handleOpenSession}
           onDelete={handleDeleteSession}
         />
-        <ChatView
-          messages={messages}
-          loading={chatLoading}
-          onSend={handleSend}
-          onStop={handleStop}
-        />
       </div>
-      {selection && <SelectionPopup rect={selection.rect} onAction={handleAction} />}
+      {selection && (
+        <>
+          {/* Our own copy of the highlight, so it survives focus moving into
+              the popup's input (the native one stops painting then). */}
+          <div className="selection-highlight" aria-hidden="true">
+            {selection.highlightRects?.map((r, i) => (
+              <div
+                key={i}
+                className="selection-highlight-rect"
+                style={{ top: r.top, left: r.left, width: r.width, height: r.height }}
+              />
+            ))}
+          </div>
+          <SelectionPopup rect={selection.rect} onAction={handleAction} />
+        </>
+      )}
       {activeSession && (
         <ActionModal
           modal={activeSession}

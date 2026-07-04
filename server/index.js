@@ -19,6 +19,16 @@ import {
   DEFAULT_REASONING,
   isValidModel,
 } from "./models.js";
+import {
+  listChats,
+  createChat,
+  getChat,
+  deleteChat,
+  chatExists,
+  addMessage,
+  upsertSession,
+  deleteSession,
+} from "./db.js";
 
 // Pull { model, reasoning } out of a request body, validating each against
 // the allowlist. Invalid/missing values fall through to the server default.
@@ -48,7 +58,9 @@ app.get("/api/models", (_req, res) => {
 
 // Pipe an OpenAI-compatible chat-completion stream to the HTTP response as
 // plain-text chunks. `streamPromise` resolves to the SDK's Stream object.
-async function pipeStream(res, streamPromise) {
+// `onDone(fullText)` fires once the stream ends (including client aborts,
+// where fullText is whatever had streamed so far).
+async function pipeStream(res, streamPromise, onDone) {
   const stream = await streamPromise;
   res.setHeader("Content-Type", "text/plain; charset=utf-8");
   res.setHeader("Cache-Control", "no-cache");
@@ -56,16 +68,29 @@ async function pipeStream(res, streamPromise) {
   // If the client disconnects (e.g. Stop pressed), abort the upstream request.
   res.on("close", () => stream.controller?.abort());
   const filter = makeReasoningFilter();
-  for await (const chunk of stream) {
-    const text = chunk.choices?.[0]?.delta?.content;
-    if (text) {
-      const visible = filter.push(text);
-      if (visible) res.write(visible);
+  let full = "";
+  try {
+    for await (const chunk of stream) {
+      const text = chunk.choices?.[0]?.delta?.content;
+      if (text) {
+        const visible = filter.push(text);
+        if (visible) {
+          full += visible;
+          res.write(visible);
+        }
+      }
     }
+    const tail = filter.flush();
+    if (tail) {
+      full += tail;
+      res.write(tail);
+    }
+  } catch (err) {
+    // Upstream abort after client disconnect is expected; anything else bubbles.
+    if (err.name !== "AbortError" && !res.writableEnded && !res.destroyed) throw err;
   }
-  const tail = filter.flush();
-  if (tail) res.write(tail);
   res.end();
+  onDone?.(full);
 }
 
 // Surface an error either as JSON (if nothing sent yet) or by ending the stream.
@@ -75,14 +100,58 @@ function handleStreamError(res, err, where) {
   else res.status(500).json({ error: err.message || "request failed" });
 }
 
-// Multi-turn chat, streamed. Body: { messages: [{ role, content }], model?, reasoning? }
+// ---- chat persistence ----
+
+app.get("/api/chats", (_req, res) => res.json({ chats: listChats() }));
+
+app.post("/api/chats", (req, res) => {
+  const title = (req.body?.title || "").trim();
+  if (!title) return res.status(400).json({ error: "title is required" });
+  res.json(createChat(title));
+});
+
+app.get("/api/chats/:id", (req, res) => {
+  const chat = getChat(Number(req.params.id));
+  if (!chat) return res.status(404).json({ error: "chat not found" });
+  res.json(chat);
+});
+
+app.delete("/api/chats/:id", (req, res) => {
+  deleteChat(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+// Write-through save of a modal session (client sends the whole tree).
+app.put("/api/sessions/:id", (req, res) => {
+  const { chatId, data } = req.body || {};
+  if (!chatId || !data) return res.status(400).json({ error: "chatId and data are required" });
+  if (!chatExists(chatId)) return res.status(404).json({ error: "chat not found" });
+  upsertSession(req.params.id, chatId, data);
+  res.json({ ok: true });
+});
+
+app.delete("/api/sessions/:id", (req, res) => {
+  deleteSession(req.params.id);
+  res.json({ ok: true });
+});
+
+// Multi-turn chat, streamed. Body: { messages: [{ role, content }], chatId?, model?, reasoning? }
+// With a chatId, the incoming user message is persisted up front and the
+// assistant reply is persisted when the stream ends (partial on abort).
 app.post("/api/chat", async (req, res) => {
   try {
-    const { messages } = req.body || {};
+    const { messages, chatId } = req.body || {};
     if (!Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: "messages must be a non-empty array" });
     }
-    await pipeStream(res, chatStream(messages, resolveOpts(req.body)));
+    const persist = chatId && chatExists(chatId);
+    if (persist) {
+      const last = messages[messages.length - 1];
+      if (last.role === "user") addMessage(chatId, "user", last.content);
+    }
+    await pipeStream(res, chatStream(messages, resolveOpts(req.body)), (full) => {
+      if (persist && full) addMessage(chatId, "assistant", full);
+    });
   } catch (err) {
     handleStreamError(res, err, "/api/chat");
   }

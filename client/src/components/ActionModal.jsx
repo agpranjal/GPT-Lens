@@ -49,6 +49,8 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Escape") {
+        // A selection popup on screen owns Esc (the app-level handler dismisses it).
+        if (document.querySelector("[data-selection-popup]")) return;
         if (followUpOpen) closeFollowUp();
         else onClose();
         return;
@@ -56,6 +58,8 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
       const tag = e.target.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
       if (e.key === "/" && !followUpOpen && current.kind !== "questions") {
+        // A selection popup on screen owns "/" (it focuses its own input).
+        if (document.querySelector("[data-selection-popup]")) return;
         e.preventDefault();
         setFollowUpOpen(true);
         return;

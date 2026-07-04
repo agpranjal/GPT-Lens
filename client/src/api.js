@@ -28,9 +28,34 @@ export async function fetchModels() {
   return res.json();
 }
 
+// Small JSON helper for the non-streaming endpoints.
+async function json(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+    ...opts,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `request failed (${res.status})`);
+  return data;
+}
+
+// ---- chat persistence ----
+export const fetchChats = () => json("/api/chats");
+export const createChat = (title) =>
+  json("/api/chats", { method: "POST", body: JSON.stringify({ title }) });
+export const fetchChat = (id) => json(`/api/chats/${id}`);
+export const deleteChat = (id) => json(`/api/chats/${id}`, { method: "DELETE" });
+export const saveSession = (session) =>
+  json(`/api/sessions/${session.id}`, {
+    method: "PUT",
+    body: JSON.stringify({ chatId: session.chatId, data: session }),
+  });
+export const deleteSessionApi = (id) => json(`/api/sessions/${id}`, { method: "DELETE" });
+
 // messages: [{ role: "user" | "assistant", content }]
-export function streamChat(messages, llmOpts, onChunk, signal) {
-  return stream("/api/chat", { messages, ...llmOpts }, onChunk, signal);
+// chatId (optional) tells the server to persist the exchange.
+export function streamChat(messages, chatId, llmOpts, onChunk, signal) {
+  return stream("/api/chat", { messages, chatId, ...llmOpts }, onChunk, signal);
 }
 
 // action: key string; custom: optional free-text instruction.

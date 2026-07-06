@@ -1,8 +1,8 @@
 // Collapsible right rail listing the current chat's saved modal sessions.
 // Slides open on hover, slides shut when the pointer leaves.
 
-// A panel/sidebar glyph shown on the collapsed strip.
-function SidebarIcon() {
+// A bookmark glyph — saved explorations live here.
+function BookmarkIcon() {
   return (
     <svg
       width="16"
@@ -15,8 +15,7 @@ function SidebarIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <line x1="9" y1="4" x2="9" y2="20" />
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
@@ -38,8 +37,7 @@ export default function SessionPanel({
     >
       <div className="panel-rail">
         <span className="panel-toggle" title="Saved sessions">
-          <SidebarIcon />
-          {sessions.length > 0 && <span className="panel-count">{sessions.length}</span>}
+          <BookmarkIcon />
         </span>
       </div>
 

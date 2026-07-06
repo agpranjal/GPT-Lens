@@ -132,6 +132,12 @@ export default function App() {
   const actionAbortRef = useRef(null); // modal action stream
 
   const activeSession = sessions.find((s) => s.id === activeId) || null;
+  const activeChatTitle = chats.find((c) => c.id === chatId)?.title || "";
+
+  // Keep the browser tab in sync with the open chat.
+  useEffect(() => {
+    document.title = activeChatTitle ? `${activeChatTitle} — skillmaxx` : "skillmaxx";
+  }, [activeChatTitle]);
 
   // Update one frame's variant within a session (fn receives the prev variant).
   const updateFrameVariant = useCallback((sessionId, frameId, key, fn) => {
@@ -701,6 +707,11 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <h1>skillmaxx</h1>
+        {activeChatTitle && (
+          <span className="header-chat-title" title={activeChatTitle}>
+            {activeChatTitle}
+          </span>
+        )}
         <ModelSelector
           models={modelOptions.models}
           reasoningLevels={modelOptions.reasoningLevels}

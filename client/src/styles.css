@@ -12,6 +12,19 @@
 
 * { box-sizing: border-box; }
 
+/* slim, dark scrollbars everywhere */
+* {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: #4a4a4a transparent;
+}
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover { background: #5a5a5a; }
+
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -46,6 +59,17 @@ body {
   flex-shrink: 0;
 }
 .app-header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+/* current chat's title, next to the wordmark */
+.header-chat-title {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+  padding-left: 12px;
+  border-left: 1px solid var(--border);
+}
 
 /* ---- model / reasoning selector (header, right-aligned) ---- */
 .model-selector {
@@ -90,6 +114,7 @@ body {
   flex: 1;
   min-width: 0;
   min-height: 0;
+  position: relative; /* anchors the jump-to-bottom pill */
 }
 
 .messages {
@@ -102,6 +127,36 @@ body {
 }
 
 .empty { color: var(--muted); margin: auto; text-align: center; }
+
+/* blinking caret riding the tail of the streaming reply */
+.message.assistant.streaming .markdown > *:last-child::after {
+  content: "▍";
+  color: var(--accent);
+  margin-left: 2px;
+  animation: caret-blink 1s steps(2, start) infinite;
+}
+@keyframes caret-blink {
+  to { visibility: hidden; }
+}
+
+/* floating "jump to latest" pill above the composer */
+.jump-to-bottom {
+  position: absolute;
+  bottom: 96px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--composer);
+  color: var(--text);
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  z-index: 10;
+}
+.jump-to-bottom:hover { border-color: var(--accent); }
 
 /* messages are centered in a fixed-width column, like ChatGPT */
 .message {
@@ -409,9 +464,10 @@ body {
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
   flex-shrink: 0;
-  scrollbar-width: none; /* Firefox */
+  /* thin scrollbar (from the global styles) doubles as the "more chips
+     this way" affordance, so it is NOT hidden here */
 }
-.variant-chips::-webkit-scrollbar { display: none; } /* WebKit */
+.variant-chips::-webkit-scrollbar { height: 5px; }
 .chip {
   flex-shrink: 0;
   background: var(--bg);
@@ -652,9 +708,39 @@ body {
   border-radius: 10px;
   padding: 14px;
   overflow-x: auto;
-  margin: 0 0 12px;
+  margin: 0;
 }
 .markdown pre code { background: none; padding: 0; font-size: 0.85em; }
+
+/* code block wrapper: hosts the hover copy button */
+.codeblock {
+  position: relative;
+  margin: 0 0 12px;
+}
+.codeblock-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.codeblock:hover .codeblock-copy { opacity: 1; }
+.codeblock-copy:hover { color: var(--text); border-color: var(--accent); }
+.codeblock-copy.copied {
+  opacity: 1;
+  color: #7ee787;
+  border-color: #7ee787;
+}
 .markdown table {
   border-collapse: collapse;
   margin: 0 0 12px;
@@ -740,21 +826,6 @@ body {
   cursor: pointer;
 }
 .panel-new:hover { border-color: var(--accent); color: var(--accent); }
-.panel-count {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  background: var(--accent);
-  color: #11243f;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 0 4px;
-  line-height: 15px;
-  min-width: 15px;
-  text-align: center;
-  box-shadow: 0 0 0 2px var(--modal);
-}
 .panel-header {
   display: flex;
   align-items: center;
@@ -772,6 +843,15 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+/* day-group headers in the chats rail (Today / Yesterday / …) */
+.panel-group {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 10px 4px 4px;
 }
 .panel-empty {
   color: var(--muted);

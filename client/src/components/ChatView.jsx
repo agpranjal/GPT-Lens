@@ -3,8 +3,20 @@ import Message from "./Message.jsx";
 
 export default function ChatView({ messages, loading, onSend, onStop, focusToken }) {
   const [input, setInput] = useState("");
+  const [awayFromBottom, setAwayFromBottom] = useState(false);
   const endRef = useRef(null);
   const inputRef = useRef(null);
+  const listRef = useRef(null);
+
+  // Show a "jump to bottom" pill once the reader scrolls up past a threshold.
+  function onScroll() {
+    const el = listRef.current;
+    if (!el) return;
+    setAwayFromBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 150);
+  }
+
+  const scrollToBottom = () =>
+    endRef.current?.scrollIntoView({ behavior: "smooth" });
 
   // Focus the message box on mount and whenever the app requests it
   // (opening a chat, starting a new one, pressing "/").
@@ -44,15 +56,30 @@ export default function ChatView({ messages, loading, onSend, onStop, focusToken
 
   return (
     <div className="chat-view">
-      <div className="messages">
+      <div className="messages" ref={listRef} onScroll={onScroll}>
         {messages.length === 0 && (
           <div className="empty">Hey !</div>
         )}
-        {messages.map((m) => (
-          <Message key={m.id} message={m} />
+        {messages.map((m, i) => (
+          <Message
+            key={m.id}
+            message={m}
+            streaming={loading && i === messages.length - 1}
+          />
         ))}
         <div ref={endRef} />
       </div>
+      {awayFromBottom && (
+        <button
+          type="button"
+          className="jump-to-bottom"
+          onClick={scrollToBottom}
+          title="Jump to latest"
+          aria-label="Jump to latest"
+        >
+          ↓
+        </button>
+      )}
       <form className="composer" onSubmit={submit}>
         <div className="composer-box">
           <textarea

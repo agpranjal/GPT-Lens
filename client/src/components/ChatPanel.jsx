@@ -28,6 +28,16 @@ function timeAgo(ts) {
   return `${Math.floor(s / 86400)}d ago`;
 }
 
+// Day bucket for grouping the list (it's already sorted newest-first).
+function dayGroup(ts) {
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const today = startOfDay(new Date());
+  if (ts >= today) return "Today";
+  if (ts >= today - 86400000) return "Yesterday";
+  if (ts >= today - 6 * 86400000) return "This week";
+  return "Earlier";
+}
+
 export default function ChatPanel({
   chats,
   activeId,
@@ -47,7 +57,6 @@ export default function ChatPanel({
       <div className="panel-rail">
         <span className="panel-toggle" title="Chats">
           <ChatsIcon />
-          {chats.length > 0 && <span className="panel-count">{chats.length}</span>}
         </span>
       </div>
 
@@ -62,30 +71,36 @@ export default function ChatPanel({
           {chats.length === 0 ? (
             <div className="panel-empty">Your chats will appear here once you send a message.</div>
           ) : (
-            chats.map((c) => (
-              <div
-                key={c.id}
-                className={`panel-item${c.id === activeId ? " active" : ""}`}
-                onClick={() => onOpen(c.id)}
-                title={c.title}
-              >
-                <div className="panel-item-text">
-                  <div className="panel-item-title">{c.title}</div>
-                  <div className="panel-item-sub">{timeAgo(c.updated_at)}</div>
+            chats.map((c, i) => {
+              const group = dayGroup(c.updated_at);
+              const isNewGroup = i === 0 || dayGroup(chats[i - 1].updated_at) !== group;
+              return (
+                <div key={c.id}>
+                  {isNewGroup && <div className="panel-group">{group}</div>}
+                  <div
+                    className={`panel-item${c.id === activeId ? " active" : ""}`}
+                    onClick={() => onOpen(c.id)}
+                    title={c.title}
+                  >
+                    <div className="panel-item-text">
+                      <div className="panel-item-title">{c.title}</div>
+                      <div className="panel-item-sub">{timeAgo(c.updated_at)}</div>
+                    </div>
+                    <button
+                      className="panel-item-del"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(c.id);
+                      }}
+                      title="Delete"
+                      aria-label="Delete chat"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
-                <button
-                  className="panel-item-del"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(c.id);
-                  }}
-                  title="Delete"
-                  aria-label="Delete chat"
-                >
-                  ✕
-                </button>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

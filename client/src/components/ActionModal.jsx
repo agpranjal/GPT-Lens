@@ -8,6 +8,7 @@ function shorten(text, n = 28) {
   return t.length > n ? t.slice(0, n) + "…" : t;
 }
 
+
 // Modal showing a navigable stack of selection-action explanations.
 // - Breadcrumbs (top) = drill-down depth (different snippets).
 // - Chip row = different lenses on the SAME snippet; click to generate/switch.

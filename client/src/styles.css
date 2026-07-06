@@ -28,6 +28,8 @@
 html, body, #root {
   height: 100%;
   margin: 0;
+  /* never bounce/scroll the app shell itself — headers and rails stay put */
+  overscroll-behavior: none;
 }
 
 body {
@@ -120,6 +122,7 @@ body {
 .messages {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain; /* chat overscroll never moves the app shell */
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -450,6 +453,7 @@ body {
   font-style: italic;
   max-height: 96px; /* cap big selections */
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-width: none; /* Firefox */
 }
 .modal-snippet::-webkit-scrollbar { display: none; } /* WebKit */
@@ -463,6 +467,7 @@ body {
   padding: 12px 22px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   flex-shrink: 0;
   /* thin scrollbar (from the global styles) doubles as the "more chips
      this way" affordance, so it is NOT hidden here */
@@ -563,6 +568,7 @@ body {
 .modal-body {
   padding: 18px 22px 24px;
   overflow-y: auto;
+  overscroll-behavior: contain; /* don't chain scrolls to the page behind */
   min-height: 0;
   flex: 1;
   scrollbar-width: none; /* Firefox */
@@ -708,6 +714,7 @@ body {
   border-radius: 10px;
   padding: 14px;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   margin: 0;
 }
 .markdown pre code { background: none; padding: 0; font-size: 0.85em; }
@@ -839,6 +846,7 @@ body {
 .panel-list {
   flex: 1;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 8px;
   display: flex;
   flex-direction: column;

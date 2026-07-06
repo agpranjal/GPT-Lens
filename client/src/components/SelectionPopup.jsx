@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ACTIONS } from "../actions.js";
 
 // Floating toolbar anchored above the current selection rect.
@@ -19,6 +19,16 @@ export default function SelectionPopup({ rect, onAction }) {
     left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
     setPos({ top, left, ready: true });
   }, [rect]);
+
+  // Focus the "ask your own…" box whenever the popup appears (or moves to a
+  // new selection). Runs off `pos` — the input is unfocusable while the popup
+  // is still visibility:hidden waiting to be positioned. The highlight
+  // overlay keeps the selected text visible.
+  useEffect(() => {
+    if (pos.ready) inputRef.current?.focus({ preventScroll: true });
+  }, [pos]);
+
+  useEffect(() => setCustom(""), [rect]);
 
   function submitCustom(e) {
     e.preventDefault();

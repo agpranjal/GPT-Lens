@@ -45,6 +45,10 @@ export default function ChatView({ messages, loading, onSend, onStop, focusToken
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
+  // Recompute the pill from the DOM when the list changes — switching chats
+  // doesn't fire a scroll event, so stale state would leave it visible.
+  useEffect(onScroll, [messages]);
+
   function submit(e) {
     e.preventDefault();
     const text = input.trim();

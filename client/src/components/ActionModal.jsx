@@ -29,6 +29,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   const followUpInputRef = useRef(null);
   const dockRef = useRef(null);
   const bodyRef = useRef(null);
+  const activeCrumbRef = useRef(null);
   const scrollPositions = useRef({}); // frame.id -> last scrollTop in .modal-body
 
   // The body element is shared by every breadcrumb, so restore the frame's own
@@ -37,6 +38,11 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     const el = bodyRef.current;
     if (el) el.scrollTop = scrollPositions.current[frame.id] ?? 0;
   }, [frame.id]);
+
+  // Keep the active breadcrumb in view when the chip row overflows.
+  useLayoutEffect(() => {
+    activeCrumbRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [index]);
 
   function closeFollowUp() {
     setFollowUpOpen(false);
@@ -161,6 +167,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
               <span key={f.id} className="crumb-wrap">
                 {i > 0 && <span className="crumb-sep">›</span>}
                 <button
+                  ref={i === index ? activeCrumbRef : null}
                   className={`crumb${i === index ? " active" : ""}`}
                   onClick={() => onNavigate(i)}
                   title={f.selectedText}

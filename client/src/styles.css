@@ -409,6 +409,20 @@ body {
 }
 .crumb:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
 .crumb.active { color: var(--accent); font-weight: 600; }
+.crumb-close {
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  padding: 3px 4px;
+  margin-left: 1px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+.crumb-close:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
 .modal-close {
   background: none;
   border: none;

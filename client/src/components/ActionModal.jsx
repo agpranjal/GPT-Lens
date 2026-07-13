@@ -14,7 +14,7 @@ function shorten(text, n = 28) {
 // - Chip row = different lenses on the SAME snippet; click to generate/switch.
 // - Follow-up box (bottom) = continue chatting about the CURRENT lens; the
 //   thread is stored on the variant itself, so it persists across chip switches.
-export default function ActionModal({ modal, onClose, onNavigate, onVariant, onAskFollowUp, onStop }) {
+export default function ActionModal({ modal, onClose, onNavigate, onVariant, onAskFollowUp, onStop, onCloseFrame }) {
   const { frames, index } = modal;
   const frame = frames[index];
   const current = frame.variants[frame.activeKey];
@@ -164,16 +164,28 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
         <header className="modal-header">
           <nav className="modal-breadcrumbs">
             {frames.map((f, i) => (
-              <span key={f.id} className="crumb-wrap">
+              <span key={f.id} className="crumb-wrap" ref={i === index ? activeCrumbRef : null}>
                 {i > 0 && <span className="crumb-sep">›</span>}
                 <button
-                  ref={i === index ? activeCrumbRef : null}
                   className={`crumb${i === index ? " active" : ""}`}
                   onClick={() => onNavigate(i)}
                   title={f.selectedText}
                 >
                   {shorten(f.selectedText)}
                 </button>
+                {i > 0 && (
+                  <button
+                    className="crumb-close"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCloseFrame(i);
+                    }}
+                    title="Remove this breadcrumb"
+                    aria-label="Remove this breadcrumb"
+                  >
+                    ✕
+                  </button>
+                )}
               </span>
             ))}
           </nav>

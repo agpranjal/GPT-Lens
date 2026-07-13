@@ -477,14 +477,27 @@ export default function App() {
 
       let sessionId;
       if (origin === "modal" && activeIdRef.current != null) {
-        // Drill-down: append a frame to the active session (truncating any
-        // forward frames from the current position).
+        // Drill-down: insert the new frame right after the current breadcrumb,
+        // never truncating what's already there — re-drilling from an earlier
+        // breadcrumb must not discard whatever was already generated past that
+        // point, it just shifts further down the trail. parentId records which
+        // frame this was drilled from (not shown in the breadcrumb row today,
+        // but kept so that relationship isn't lost).
         sessionId = activeIdRef.current;
         setSessions((ss) =>
           ss.map((s) => {
             if (s.id !== sessionId) return s;
-            const kept = s.frames.slice(0, s.index + 1);
-            return { ...s, frames: [...kept, frame], index: kept.length };
+            const parentId = s.frames[s.index].id;
+            const insertAt = s.index + 1;
+            return {
+              ...s,
+              frames: [
+                ...s.frames.slice(0, insertAt),
+                { ...frame, parentId },
+                ...s.frames.slice(insertAt),
+              ],
+              index: insertAt,
+            };
           })
         );
       } else {
@@ -580,6 +593,27 @@ export default function App() {
   const handleNavigate = useCallback((index) => {
     const sessionId = activeIdRef.current;
     setSessions((ss) => ss.map((s) => (s.id === sessionId ? { ...s, index } : s)));
+  }, []);
+
+  // Remove a single breadcrumb (never the first). Only that frame goes away —
+  // any frames drilled from it are left in place, just now parented to a
+  // frame that no longer exists in the trail.
+  const handleCloseFrame = useCallback((removeIndex) => {
+    if (removeIndex === 0) return;
+    const sessionId = activeIdRef.current;
+    setSessions((ss) =>
+      ss.map((s) => {
+        if (s.id !== sessionId) return s;
+        const frames = s.frames.filter((_, i) => i !== removeIndex);
+        const index =
+          s.index === removeIndex
+            ? removeIndex - 1
+            : s.index > removeIndex
+            ? s.index - 1
+            : s.index;
+        return { ...s, frames, index };
+      })
+    );
   }, []);
 
   // Continue the CURRENT lens's chat with a follow-up question. Unlike a
@@ -773,6 +807,7 @@ export default function App() {
           onVariant={handleVariant}
           onAskFollowUp={handleAskFollowUp}
           onStop={handleStopAction}
+          onCloseFrame={handleCloseFrame}
         />
       )}
     </div>

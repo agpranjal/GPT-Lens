@@ -26,6 +26,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   const [custom, setCustom] = useState("");
   const [followUp, setFollowUp] = useState("");
   const [followUpOpen, setFollowUpOpen] = useState(false);
+  const [maximized, setMaximized] = useState(false);
   const followUpInputRef = useRef(null);
   const dockRef = useRef(null);
   const bodyRef = useRef(null);
@@ -151,7 +152,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   return (
     <div className="modal-overlay" onMouseDown={onClose}>
       <div
-        className="modal"
+        className={`modal${maximized ? " maximized" : ""}`}
         onMouseDown={(e) => {
           e.stopPropagation();
           // Click anywhere in the modal other than the follow-up dock itself
@@ -195,6 +196,14 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
                 Stop
               </button>
             )}
+            <button
+              className="modal-maximize"
+              onClick={() => setMaximized((m) => !m)}
+              title={maximized ? "Restore" : "Maximize"}
+              aria-label={maximized ? "Restore" : "Maximize"}
+            >
+              {maximized ? "⤡" : "⤢"}
+            </button>
             <button className="modal-close" onClick={onClose} aria-label="Close">
               ✕
             </button>

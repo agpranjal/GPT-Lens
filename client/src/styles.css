@@ -334,14 +334,19 @@ body {
   background: var(--modal);
   border: 1px solid var(--border);
   border-radius: 16px;
-  width: min(94vw, 1200px);
-  max-height: 92vh;
+  width: min(90vw, 880px);
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
   overflow: hidden; /* clip children to the rounded corners */
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
   animation: modal-in 0.18s ease-out;
   transform-origin: center;
+  transition: width 0.15s ease-out, max-height 0.15s ease-out;
+}
+.modal.maximized {
+  width: min(94vw, 1200px);
+  max-height: 92vh;
 }
 @keyframes overlay-in {
   from { opacity: 0; }
@@ -434,6 +439,17 @@ body {
   line-height: 1;
 }
 .modal-close:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+.modal-maximize {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  line-height: 1;
+}
+.modal-maximize:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
 
 /* content area: fixed meta block on top, scrolling body below */
 .modal-content {

@@ -334,8 +334,8 @@ body {
   background: var(--modal);
   border: 1px solid var(--border);
   border-radius: 16px;
-  width: min(90vw, 880px);
-  max-height: 88vh;
+  width: min(94vw, 1200px);
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
   overflow: hidden; /* clip children to the rounded corners */

@@ -542,66 +542,6 @@ textarea:focus-visible {
 }
 .modal-snippet::-webkit-scrollbar { display: none; } /* WebKit */
 
-/* variant chips: lenses on the same snippet — single scrollable row */
-.variant-chips {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 6px;
-  padding: 12px 22px;
-  border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  flex-shrink: 0;
-  /* thin scrollbar (from the global styles) doubles as the "more chips
-     this way" affordance, so it is NOT hidden here */
-}
-.variant-chips::-webkit-scrollbar { height: 5px; }
-.chip {
-  flex-shrink: 0;
-  background: var(--bg);
-  color: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 5px 12px;
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.2;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.chip:hover { color: var(--text); border-color: var(--accent); }
-/* viewed lenses: clearly distinct from un-opened ones (filled + ✓) */
-.chip.generated {
-  color: var(--text);
-  background: rgba(138, 180, 248, 0.14);
-  border-color: rgba(138, 180, 248, 0.45);
-}
-.chip.generated:not(.active)::before {
-  content: "✓";
-  margin-right: 5px;
-  color: var(--accent);
-  font-weight: 700;
-}
-.chip.active {
-  background: var(--accent);
-  color: #11243f;
-  border-color: var(--accent);
-  font-weight: 600;
-}
-.chip-custom { flex-shrink: 0; }
-.chip-custom input {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text);
-  padding: 5px 12px;
-  font: inherit;
-  font-size: 13px;
-  width: 130px;
-  outline: none;
-}
-.chip-custom input:focus { border-color: var(--accent); }
 .modal-body {
   padding: 18px 22px 24px;
   overflow-y: auto;

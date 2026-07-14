@@ -1,7 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Markdown from "./Markdown.jsx";
 import Dots from "./Dots.jsx";
-import { ACTIONS } from "../actions.js";
 
 function shorten(text, n = 28) {
   const t = (text || "").trim().replace(/\s+/g, " ");
@@ -10,10 +9,11 @@ function shorten(text, n = 28) {
 
 
 // Modal showing a navigable stack of selection-action explanations.
-// - Breadcrumbs (top) = drill-down depth (different snippets).
-// - Chip row = different lenses on the SAME snippet; click to generate/switch.
-// - Follow-up box (bottom) = continue chatting about the CURRENT lens; the
-//   thread is stored on the variant itself, so it persists across chip switches.
+// - Tabs (top) = drill-down depth (different snippets) and different lenses
+//   on the same snippet — each lens opens as its own tab (see onVariant).
+// - Follow-up box (bottom) = continue chatting about the CURRENT lens (plain
+//   Enter), or ask it as a fresh lens in a new tab (Cmd/Ctrl+Enter). The
+//   thread is stored on the variant itself, so it persists across tab switches.
 export default function ActionModal({ modal, onClose, onNavigate, onVariant, onAskFollowUp, onStop, onCloseFrame }) {
   const { frames, index } = modal;
   const frame = frames[index];
@@ -23,12 +23,10 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     (f) => f.status === "loading" || f.status === "streaming"
   );
   const anyStreaming = streaming || followUpStreaming;
-  const [custom, setCustom] = useState("");
   const [followUp, setFollowUp] = useState("");
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const [maximized, setMaximized] = useState(false);
   const followUpInputRef = useRef(null);
-  const customInputRef = useRef(null);
   const dockRef = useRef(null);
   const bodyRef = useRef(null);
   const activeCrumbRef = useRef(null);
@@ -41,7 +39,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     if (el) el.scrollTop = scrollPositions.current[frame.id] ?? 0;
   }, [frame.id]);
 
-  // Keep the active breadcrumb in view when the chip row overflows.
+  // Keep the active breadcrumb in view when the tab row overflows.
   useLayoutEffect(() => {
     activeCrumbRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [index]);
@@ -73,6 +71,15 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
         else onClose();
         return;
       }
+      // Cmd/Ctrl+M toggles maximize — works even while typing in an input,
+      // since "m" isn't otherwise bound. Note: on macOS this key combo is
+      // normally "minimize window", which some browsers intercept before a
+      // page ever sees the keydown — same class of issue as Cmd+W earlier.
+      if ((e.metaKey || e.ctrlKey) && (e.key === "m" || e.key === "M")) {
+        e.preventDefault();
+        setMaximized((m) => !m);
+        return;
+      }
       const tag = e.target.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
       // Cmd/Ctrl+X closes the current tab (never the first — that's the root).
@@ -98,54 +105,22 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose, onNavigate, onCloseFrame, index, frames.length, followUpOpen]);
 
-  // Custom variants created on this frame (in creation order), for chips.
-  const customKeys = frame.order.filter((k) => frame.variants[k]?.kind === "custom");
-
-  // Chips: standard actions, then customs (these get MRU-sorted).
-  const chips = [
-    ...ACTIONS.map((a) => ({
-      key: a.action,
-      display: a.label,
-      payload: a,
-      generated: !!frame.variants[a.action],
-    })),
-    ...customKeys.map((k) => {
-      const v = frame.variants[k];
-      return {
-        key: k,
-        display: shorten(v.label, 20),
-        payload: { custom: v.custom, label: v.label },
-        generated: true,
-      };
-    }),
-  ];
-  // Clicked chips lead, most-recent first (MRU); the rest keep default order.
-  const rank = (key) => {
-    const i = frame.selectedOrder.indexOf(key);
-    return i === -1 ? Infinity : i;
-  };
-  const orderedChips = [...chips].sort((x, y) => {
-    const rx = rank(x.key);
-    const ry = rank(y.key);
-    return rx === ry ? 0 : rx - ry;
-  });
-
-  function submitCustom(e) {
-    e.preventDefault();
-    const text = custom.trim();
-    if (!text) return;
-    onVariant({ custom: text, label: text });
-    setCustom("");
-    // The prompt opened a new tab — drop focus so no highlight lingers on
-    // the input (or gets upgraded to a focus ring by later keyboard use).
-    customInputRef.current?.blur();
-  }
-
   function submitFollowUp(e) {
     e.preventDefault();
     const text = followUp.trim();
     if (!text || anyStreaming) return;
     onAskFollowUp(text);
+    setFollowUp("");
+    closeFollowUp();
+  }
+
+  // Cmd/Ctrl+Enter (or Cmd/Ctrl+click Send) from the follow-up box asks it as
+  // a fresh lens in a NEW tab instead of appending to the current one — same
+  // snippet, but its own thread, for when the follow-up is really a tangent.
+  function askFollowUpAsNewTab() {
+    const text = followUp.trim();
+    if (!text || anyStreaming) return;
+    onVariant({ custom: text, label: text });
     setFollowUp("");
     closeFollowUp();
   }
@@ -220,31 +195,6 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
             <blockquote className="modal-snippet">{frame.selectedText}</blockquote>
           </div>
 
-          {/* lenses on this snippet — horizontally scrollable, never wraps.
-              the active chip is moved to the front. */}
-          <div className="variant-chips">
-            {orderedChips.map((c) => (
-              <button
-                key={c.key}
-                className={`chip${c.key === frame.activeKey ? " active" : ""}${
-                  c.generated ? " generated" : ""
-                }`}
-                onClick={() => onVariant(c.payload)}
-                title={c.title || c.display}
-              >
-                {c.display}
-              </button>
-            ))}
-            <form className="chip-custom" onSubmit={submitCustom}>
-              <input
-                ref={customInputRef}
-                value={custom}
-                onChange={(e) => setCustom(e.target.value)}
-                placeholder="ask your own…"
-              />
-            </form>
-          </div>
-
           <div
             className="modal-body"
             data-modal-body
@@ -291,10 +241,26 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
                   ref={followUpInputRef}
                   value={followUp}
                   onChange={(e) => setFollowUp(e.target.value)}
-                  placeholder="Ask a follow-up…"
+                  onKeyDown={(e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                      e.preventDefault();
+                      askFollowUpAsNewTab();
+                    }
+                  }}
+                  placeholder="Ask a follow-up… (⌘⏎ for a new tab)"
                   disabled={anyStreaming}
                 />
-                <button type="submit" disabled={anyStreaming || !followUp.trim()}>
+                <button
+                  type="submit"
+                  disabled={anyStreaming || !followUp.trim()}
+                  onClick={(e) => {
+                    if (e.metaKey || e.ctrlKey) {
+                      e.preventDefault();
+                      askFollowUpAsNewTab();
+                    }
+                  }}
+                  title="Send (⌘+click for a new tab)"
+                >
                   Send
                 </button>
               </form>

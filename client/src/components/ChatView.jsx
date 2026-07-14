@@ -93,7 +93,7 @@ export default function ChatView({ messages, loading, onSend, onStop, focusToken
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) submit(e);
             }}
-            placeholder="Type a message… (Enter to send, Shift+Enter for newline)"
+            placeholder="Type a message… (⏎ to send, ⇧⏎ for newline)"
             rows={1}
           />
           {loading ? (

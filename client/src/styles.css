@@ -1,12 +1,12 @@
 :root {
-  --bg: #212121;
-  --user-bubble: #303030;
+  --bg: #000000;
+  --user-bubble: #2f2f2f;
   --text: #ececec;
   --muted: #9a9a9a;
-  --border: #3a3a3a;
+  --border: #2f2f2f;
   --accent: #8ab4f8;
-  --composer: #303030;
-  --modal: #2a2a2a;
+  --composer: #2f2f2f;
+  --modal: #171717;
   --content-width: 768px;
 }
 

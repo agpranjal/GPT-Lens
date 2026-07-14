@@ -3,10 +3,11 @@
 // popup and the modal's variant chips so they never drift.
 export const ACTIONS = [
   { action: "Nah explain better", label: "Explain better" },
+  { action: "Give Example", label: "Example" },
   { action: "Go deeper", label: "Go deeper" },
   { action: "Explain step by step", label: "Step by Step" },
-  { action: "Explain w/ code", label: "Code" },
-  { action: "WTF is this — assume I know nothing, start from scratch", label: "WTF" },
+  { action: "Explain with code", label: "Code" },
+  { action: "WTF is this", label: "WTF" },
   { action: "How", label: "How" },
   { action: "Why", label: "Why" },
 ];

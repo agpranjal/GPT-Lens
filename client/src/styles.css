@@ -514,7 +514,8 @@ textarea:focus-visible {
   flex: 1;
 }
 .modal-meta {
-  padding: 18px 22px 0;
+  padding: 18px 22px 16px;
+  border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
 .modal-label {

@@ -791,10 +791,17 @@ body {
   position: relative;
   margin: 0 0 12px;
 }
-.codeblock-copy {
+.codeblock-actions {
   position: absolute;
   top: 8px;
   right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  z-index: 1;
+}
+.codeblock-copy,
+.codeblock-select {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -806,10 +813,12 @@ body {
   border-radius: 6px;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s ease, color 0.15s ease;
+  transition: opacity 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
-.codeblock:hover .codeblock-copy { opacity: 1; }
-.codeblock-copy:hover { color: var(--text); border-color: var(--accent); }
+.codeblock:hover .codeblock-copy,
+.codeblock:hover .codeblock-select { opacity: 1; }
+.codeblock-copy:hover,
+.codeblock-select:hover { color: var(--text); border-color: var(--accent); }
 .codeblock-copy.copied {
   opacity: 1;
   color: #7ee787;

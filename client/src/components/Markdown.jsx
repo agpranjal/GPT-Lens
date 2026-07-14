@@ -2,10 +2,23 @@ import { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// Code block with a hover copy button (top-right corner).
+// Code block with hover buttons (top-right corner): "select" and "copy".
 function Pre(props) {
   const preRef = useRef(null);
   const [copied, setCopied] = useState(false);
+
+  // Select the whole code block, then let the app's global selection handler
+  // (it listens on mouseup) show the same action popup a manual highlight does.
+  function selectCode() {
+    const codeEl = preRef.current?.querySelector("code");
+    if (!codeEl) return;
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    const range = document.createRange();
+    range.selectNodeContents(codeEl);
+    sel.addRange(range);
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+  }
 
   async function copy() {
     const code = preRef.current?.querySelector("code")?.innerText || "";
@@ -28,6 +41,28 @@ function Pre(props) {
 
   return (
     <div className="codeblock">
+      <div className="codeblock-actions">
+      <button
+        type="button"
+        className="codeblock-select"
+        onClick={selectCode}
+        aria-label="Select code"
+        title="Select code to ask AI"
+      >
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2" />
+        </svg>
+      </button>
       <button
         type="button"
         className={`codeblock-copy${copied ? " copied" : ""}`}
@@ -66,6 +101,7 @@ function Pre(props) {
           </svg>
         )}
       </button>
+      </div>
       <pre ref={preRef} {...props} />
     </div>
   );

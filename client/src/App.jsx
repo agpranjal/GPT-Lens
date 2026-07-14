@@ -371,6 +371,23 @@ export default function App() {
     [resetToFreshChat]
   );
 
+  // Esc dismisses the selection popup — at the CAPTURE phase, with
+  // stopPropagation, so it always wins over whatever's underneath it (e.g.
+  // the modal's own Esc-to-close). Capture always runs before bubble-phase
+  // listeners regardless of when each was attached, so this can't lose a
+  // race against the modal's handler depending on mount/subscribe timing.
+  useEffect(() => {
+    function onKeyCapture(e) {
+      if (e.key !== "Escape") return;
+      if (!document.querySelector("[data-selection-popup]")) return;
+      e.stopPropagation();
+      setSelection(null);
+      window.getSelection()?.removeAllRanges();
+    }
+    document.addEventListener("keydown", onKeyCapture, true);
+    return () => document.removeEventListener("keydown", onKeyCapture, true);
+  }, []);
+
   // Global shortcuts: cmd/ctrl+shift+O starts a new chat; "/" focuses the
   // composer. With the modal open, "/" is left to the modal's own handler
   // (it opens the floating follow-up box there).
@@ -379,12 +396,6 @@ export default function App() {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "o") {
         e.preventDefault();
         resetToFreshChat();
-        return;
-      }
-      // Esc dismisses the selection popup, even from inside its own input.
-      if (e.key === "Escape" && document.querySelector("[data-selection-popup]")) {
-        setSelection(null);
-        window.getSelection()?.removeAllRanges();
         return;
       }
       if (e.key === "/" && !e.metaKey && !e.ctrlKey && !e.altKey) {

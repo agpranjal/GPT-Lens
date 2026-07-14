@@ -28,6 +28,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const [maximized, setMaximized] = useState(false);
   const followUpInputRef = useRef(null);
+  const customInputRef = useRef(null);
   const dockRef = useRef(null);
   const bodyRef = useRef(null);
   const activeCrumbRef = useRef(null);
@@ -135,6 +136,9 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     if (!text) return;
     onVariant({ custom: text, label: text });
     setCustom("");
+    // The prompt opened a new tab — drop focus so no highlight lingers on
+    // the input (or gets upgraded to a focus ring by later keyboard use).
+    customInputRef.current?.blur();
   }
 
   function submitFollowUp(e) {
@@ -233,6 +237,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
             ))}
             <form className="chip-custom" onSubmit={submitCustom}>
               <input
+                ref={customInputRef}
                 value={custom}
                 onChange={(e) => setCustom(e.target.value)}
                 placeholder="ask your own…"

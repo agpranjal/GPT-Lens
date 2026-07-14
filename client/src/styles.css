@@ -38,6 +38,23 @@ body {
   font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
+/* Controls never show a browser focus ring anywhere in the app. A clicked
+   button silently keeps focus, and any later keypress (arrow keys, Enter)
+   upgrades that to a visible :focus-visible ring — which reads as a stray
+   highlight left behind. Our own hover/active styles carry the affordance;
+   text inputs keep their intentional focused-border styles (border-color
+   rules are unaffected by outline). */
+button:focus,
+button:focus-visible,
+[role="tab"]:focus,
+[role="tab"]:focus-visible,
+input:focus,
+input:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: none;
+}
+
 .app {
   display: flex;
   flex-direction: column;

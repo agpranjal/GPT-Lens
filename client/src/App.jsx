@@ -523,68 +523,58 @@ export default function App() {
     [selection, runVariant]
   );
 
-  // Run a different action on the CURRENT frame's snippet (same-snippet lens).
-  // If that variant already exists, just switch to it (cached, instant).
+  // Apply a different lens (action chip or "ask your own") to the CURRENT
+  // frame's snippet. Each lens opens as its OWN tab inserted right after the
+  // current one — like opening a link in a new browser tab — rather than
+  // swapping the current tab's body in place. Clicking the lens the current
+  // tab already shows is a no-op.
   const handleVariant = useCallback(
     async (payload) => {
       const sessionId = activeIdRef.current;
       const s = sessionsRef.current.find((x) => x.id === sessionId);
       if (!s) return;
-      const frame = s.frames[s.index];
+      const currentFrame = s.frames[s.index];
       const key = variantKey(payload);
 
-      if (frame.variants[key]) {
-        setSessions((ss) =>
-          ss.map((x) =>
-            x.id !== sessionId
-              ? x
-              : {
-                  ...x,
-                  frames: x.frames.map((f) =>
-                    f.id !== frame.id
-                      ? f
-                      : {
-                          ...f,
-                          activeKey: key,
-                          selectedOrder: [
-                            key,
-                            ...f.selectedOrder.filter((k) => k !== key),
-                          ],
-                        }
-                  ),
-                }
-          )
-        );
-        return;
-      }
+      // Already looking at this lens in the current tab — nothing to do.
+      if (currentFrame.activeKey === key) return;
 
+      const frameId = ++nextId;
       const variant = makeVariant(payload);
+      const newFrame = {
+        id: frameId,
+        parentId: currentFrame.id,
+        // Same snippet as the source tab — the lens is a new view of it, so
+        // further drill-downs and follow-ups still operate on this text.
+        selectedText: currentFrame.selectedText,
+        sourceMessageText: currentFrame.sourceMessageText,
+        // The breadcrumb shows the lens (action/prompt), not the snippet, so
+        // sibling lens-tabs on the same snippet stay distinguishable.
+        tabLabel: variant.label,
+        variants: { [key]: variant },
+        order: [key],
+        selectedOrder: [key],
+        activeKey: key,
+      };
+      const insertAt = s.index + 1;
       setSessions((ss) =>
         ss.map((x) =>
           x.id !== sessionId
             ? x
             : {
                 ...x,
-                frames: x.frames.map((f) =>
-                  f.id !== frame.id
-                    ? f
-                    : {
-                        ...f,
-                        variants: { ...f.variants, [key]: variant },
-                        order: [...f.order, key],
-                        selectedOrder: [
-                          key,
-                          ...f.selectedOrder.filter((k) => k !== key),
-                        ],
-                        activeKey: key,
-                      }
-                ),
+                frames: [
+                  ...x.frames.slice(0, insertAt),
+                  newFrame,
+                  ...x.frames.slice(insertAt),
+                ],
+                index: insertAt,
               }
         )
       );
-      await runVariant(sessionId, frame.id, payload, {
-        selectedText: frame.selectedText,
-        sourceMessageText: frame.sourceMessageText,
+      await runVariant(sessionId, frameId, payload, {
+        selectedText: currentFrame.selectedText,
+        sourceMessageText: currentFrame.sourceMessageText,
       });
     },
     [runVariant]

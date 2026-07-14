@@ -183,7 +183,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
                 role="tab"
                 aria-selected={i === index}
               >
-                <span className="modal-tab-label">{shorten(f.selectedText)}</span>
+                <span className="modal-tab-label">{shorten(f.tabLabel || f.selectedText)}</span>
                 {i > 0 && (
                   <button
                     className="modal-tab-close"

@@ -531,17 +531,21 @@ export default function App() {
     [selection, runVariant]
   );
 
-  // Apply a different lens (action chip or "ask your own") to the CURRENT
-  // frame's snippet. Each lens opens as its OWN tab inserted right after the
-  // current one — like opening a link in a new browser tab — rather than
-  // swapping the current tab's body in place. Clicking the lens the current
-  // tab already shows is a no-op.
+  // Ask something new about the CURRENT tab's snippet, landing in a NEW tab
+  // inserted right after the current one — like a same-tab follow-up (Enter),
+  // except the answer opens its own tab instead of appending to this one.
+  // Carries the SAME context a same-tab follow-up would see: the current
+  // tab's own answer plus its completed follow-ups, sent as invisible
+  // history alongside the new question — so the new tab's first answer
+  // already knows what was already discussed here, it just lives on its own.
+  // Clicking the lens the current tab already shows is a no-op.
   const handleVariant = useCallback(
     async (payload) => {
       const sessionId = activeIdRef.current;
       const s = sessionsRef.current.find((x) => x.id === sessionId);
       if (!s) return;
       const currentFrame = s.frames[s.index];
+      const currentVariant = currentFrame.variants[currentFrame.activeKey];
       const key = variantKey(payload);
 
       // Already looking at this lens in the current tab — nothing to do.
@@ -580,12 +584,30 @@ export default function App() {
               }
         )
       );
-      await runVariant(sessionId, frameId, payload, {
+
+      // Same history shape handleAskFollowUp sends: the tab we're branching
+      // from, its own answer, and its completed follow-ups.
+      const history = [
+        { role: "assistant", content: currentVariant.text },
+        ...(currentVariant.followUps || [])
+          .filter((f) => f.status === "done")
+          .flatMap((f) => [
+            { role: "user", content: f.question },
+            { role: "assistant", content: f.answer },
+          ]),
+      ];
+      await streamIntoVariant(sessionId, frameId, key, {
+        // action/custom here rebuild the CURRENT tab's seed prompt server-side
+        // (so `history` above lines up with it) — not the new tab's own lens.
+        action: currentVariant.action,
+        custom: currentVariant.custom,
         selectedText: currentFrame.selectedText,
         sourceMessageText: currentFrame.sourceMessageText,
+        history,
+        question: payload.custom,
       });
     },
-    [runVariant]
+    [streamIntoVariant]
   );
 
   const handleNavigate = useCallback((index) => {

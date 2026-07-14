@@ -49,6 +49,34 @@ const shorten = (text, n = 44) => {
   return t.length > n ? t.slice(0, n) + "…" : t;
 };
 
+// Walk the drill-down chain via parentId (NOT array order — re-drilling from
+// an earlier tab can leave later tabs out of order) from `frame` back to the
+// session's root. Returns ancestors oldest-first; `frame` itself is never
+// included.
+const ancestorFrames = (frames, frame) => {
+  const byId = new Map(frames.map((f) => [f.id, f]));
+  const chain = [];
+  let current = frame;
+  while (current?.parentId != null) {
+    const parent = byId.get(current.parentId);
+    if (!parent) break;
+    chain.unshift(parent);
+    current = parent;
+  }
+  return chain;
+};
+
+// An ancestor tab as the {user, assistant} pair the model would have seen if
+// this had been one continuous conversation instead of a separate tab: what
+// was asked of it, and what it answered.
+const ancestorToTurns = (frame) => {
+  const v = frame.variants[frame.activeKey];
+  return [
+    { role: "user", content: `Selected text:\n"""\n${frame.selectedText}\n"""\n\n${v?.label || ""}` },
+    { role: "assistant", content: v?.text || "" },
+  ];
+};
+
 // Intersect a viewport rect with a clipping element's box. Our selection
 // highlight is position:fixed at the document root, so without clipping it to
 // the scroll container it lives in, a tall selection paints blocks outside
@@ -492,6 +520,11 @@ export default function App() {
       };
 
       let sessionId;
+      // Every tab OLDER than the one we're drilling from (its own answer
+      // becomes this new tab's "Context:", but nothing else captures tabs
+      // further back) — folded in as extra turns so this tab still knows
+      // about the whole drill-down chain, not just the one hop back.
+      let ancestorHistory = [];
       if (origin === "modal" && activeIdRef.current != null) {
         // Drill-down: insert the new frame right after the current breadcrumb,
         // never truncating what's already there — re-drilling from an earlier
@@ -500,6 +533,11 @@ export default function App() {
         // frame this was drilled from (not shown in the breadcrumb row today,
         // but kept so that relationship isn't lost).
         sessionId = activeIdRef.current;
+        const s = sessionsRef.current.find((x) => x.id === sessionId);
+        const currentFrame = s?.frames[s.index];
+        if (currentFrame) {
+          ancestorHistory = ancestorFrames(s.frames, currentFrame).flatMap(ancestorToTurns);
+        }
         setSessions((ss) =>
           ss.map((s) => {
             if (s.id !== sessionId) return s;
@@ -534,7 +572,7 @@ export default function App() {
 
       setSelection(null);
       window.getSelection()?.removeAllRanges();
-      await runVariant(sessionId, frameId, payload, { selectedText, sourceMessageText });
+      await runVariant(sessionId, frameId, payload, { selectedText, sourceMessageText, ancestorHistory });
     },
     [selection, runVariant]
   );
@@ -604,6 +642,12 @@ export default function App() {
             { role: "assistant", content: f.answer },
           ]),
       ];
+      // Tabs older than the one we're branching from — its immediate parent
+      // is already embedded as this request's own "Context:" (sourceMessageText
+      // above), so drop it here to avoid repeating it.
+      const ancestorHistory = ancestorFrames(s.frames, currentFrame)
+        .slice(0, -1)
+        .flatMap(ancestorToTurns);
       await streamIntoVariant(sessionId, frameId, key, {
         // action/custom here rebuild the CURRENT tab's seed prompt server-side
         // (so `history` above lines up with it) — not the new tab's own lens.
@@ -611,6 +655,7 @@ export default function App() {
         custom: currentVariant.custom,
         selectedText: currentFrame.selectedText,
         sourceMessageText: currentFrame.sourceMessageText,
+        ancestorHistory,
         history,
         question: payload.custom,
       });
@@ -668,6 +713,11 @@ export default function App() {
             { role: "assistant", content: f.answer },
           ]),
       ];
+      // Tabs older than this one — its immediate parent is already embedded
+      // as this request's own "Context:" (sourceMessageText below).
+      const ancestorHistory = ancestorFrames(s.frames, frame)
+        .slice(0, -1)
+        .flatMap(ancestorToTurns);
 
       updateFrameVariant(sessionId, frame.id, key, (v) => ({
         ...v,
@@ -690,6 +740,7 @@ export default function App() {
             selectedText: frame.selectedText,
             sourceMessageText: frame.sourceMessageText,
             chatHistory: mainChatHistory(),
+            ancestorHistory,
             history,
             question: text,
           },

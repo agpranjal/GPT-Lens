@@ -158,6 +158,10 @@ app.post("/api/chat", async (req, res) => {
 // `chatHistory` (optional): the full main-chat transcript this session was
 // opened from — [{role, content}, ...] — prepended so every action, however
 // many tabs deep, still has everything discussed in the main chat.
+// `ancestorHistory` (optional): turns for every tab OLDER than the immediate
+// one sourceMessageText already covers — the rest of the drill-down chain,
+// so a tab several levels deep still knows about every tab before it, not
+// just the one it directly branched from.
 // Follow-up (continuing the same lens's chat): also pass
 // { history: [{role,content}, ...], question } — history is the prior
 // exchange (starting with the lens's own answer), question is the new turn.
@@ -165,7 +169,7 @@ app.post("/api/chat", async (req, res) => {
 // sourceMessageText so continuation always has the exact original context.
 app.post("/api/action", async (req, res) => {
   try {
-    const { action, selectedText, sourceMessageText, custom, chatHistory, history, question } =
+    const { action, selectedText, sourceMessageText, custom, chatHistory, ancestorHistory, history, question } =
       req.body || {};
     if (!selectedText || !sourceMessageText) {
       return res
@@ -177,6 +181,7 @@ app.post("/api/action", async (req, res) => {
 
     const messages = [
       ...(Array.isArray(chatHistory) ? chatHistory : []),
+      ...(Array.isArray(ancestorHistory) ? ancestorHistory : []),
       { role: "user", content: seedPrompt },
       ...(Array.isArray(history) ? history : []),
       ...(question ? [{ role: "user", content: question }] : []),

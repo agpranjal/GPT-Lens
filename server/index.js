@@ -37,6 +37,14 @@ function resolveOpts(body) {
   return { model, reasoning };
 }
 
+// Toggle for the extra context added in chatHistory/ancestorHistory (the
+// full main-chat transcript and the rest of the drill-down chain sent with
+// every modal action). Defaults to ON — set EXTRA_CONTEXT=false in .env to
+// fall back to the leaner, pre-existing one-hop-back behavior. Doesn't
+// affect same-tab follow-up continuation (history/question) — that's a
+// separate, older mechanism this flag leaves untouched either way.
+const EXTRA_CONTEXT = process.env.EXTRA_CONTEXT !== "false";
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "1mb" }));
@@ -180,8 +188,8 @@ app.post("/api/action", async (req, res) => {
     const seedPrompt = buildActionPrompt({ sourceMessageText, selectedText, instruction });
 
     const messages = [
-      ...(Array.isArray(chatHistory) ? chatHistory : []),
-      ...(Array.isArray(ancestorHistory) ? ancestorHistory : []),
+      ...(EXTRA_CONTEXT && Array.isArray(chatHistory) ? chatHistory : []),
+      ...(EXTRA_CONTEXT && Array.isArray(ancestorHistory) ? ancestorHistory : []),
       { role: "user", content: seedPrompt },
       ...(Array.isArray(history) ? history : []),
       ...(question ? [{ role: "user", content: question }] : []),

@@ -3,7 +3,6 @@ import express from "express";
 import cors from "cors";
 import {
   chatStream,
-  generateStream,
   makeReasoningFilter,
 } from "./llm.js";
 import {
@@ -156,6 +155,9 @@ app.post("/api/chat", async (req, res) => {
 });
 
 // Selection action, streamed. Body: { action, selectedText, sourceMessageText, custom?, model?, reasoning? }
+// `chatHistory` (optional): the full main-chat transcript this session was
+// opened from — [{role, content}, ...] — prepended so every action, however
+// many tabs deep, still has everything discussed in the main chat.
 // Follow-up (continuing the same lens's chat): also pass
 // { history: [{role,content}, ...], question } — history is the prior
 // exchange (starting with the lens's own answer), question is the new turn.
@@ -163,7 +165,7 @@ app.post("/api/chat", async (req, res) => {
 // sourceMessageText so continuation always has the exact original context.
 app.post("/api/action", async (req, res) => {
   try {
-    const { action, selectedText, sourceMessageText, custom, history, question } =
+    const { action, selectedText, sourceMessageText, custom, chatHistory, history, question } =
       req.body || {};
     if (!selectedText || !sourceMessageText) {
       return res
@@ -173,14 +175,13 @@ app.post("/api/action", async (req, res) => {
     const instruction = resolveInstruction({ action, custom });
     const seedPrompt = buildActionPrompt({ sourceMessageText, selectedText, instruction });
 
-    const stream =
-      Array.isArray(history) && question
-        ? chatStream(
-            [{ role: "user", content: seedPrompt }, ...history, { role: "user", content: question }],
-            resolveOpts(req.body)
-          )
-        : generateStream(seedPrompt, resolveOpts(req.body));
-    await pipeStream(res, stream);
+    const messages = [
+      ...(Array.isArray(chatHistory) ? chatHistory : []),
+      { role: "user", content: seedPrompt },
+      ...(Array.isArray(history) ? history : []),
+      ...(question ? [{ role: "user", content: question }] : []),
+    ];
+    await pipeStream(res, chatStream(messages, resolveOpts(req.body)));
   } catch (err) {
     handleStreamError(res, err, "/api/action");
   }

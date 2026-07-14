@@ -118,18 +118,3 @@ export function chatStream(messages, opts) {
     ],
   });
 }
-
-// One-shot generation from a single prompt string, streamed (used by selection actions).
-export function generateStream(prompt, opts) {
-  const { model, reasoning } = resolveParams(opts);
-  return llm().chat.completions.create({
-    model,
-    max_tokens: MAX_TOKENS,
-    stream: true,
-    reasoning,
-    messages: [
-      { role: "system", content: SYSTEM },
-      { role: "user", content: prompt },
-    ],
-  });
-}

@@ -418,13 +418,21 @@ export default function App() {
   }, [resetToFreshChat, focusComposer]);
 
   // Stream an action result into a specific session/frame variant.
+  // The full main-chat transcript, in the {role, content} shape the API
+  // expects — sent alongside every modal action so it always has everything
+  // discussed in the main chat, however many tabs deep it is.
+  const mainChatHistory = useCallback(
+    () => messagesRef.current.map(({ role, content }) => ({ role, content })),
+    []
+  );
+
   const streamIntoVariant = useCallback(
     async (sessionId, frameId, key, payload) => {
       const controller = new AbortController();
       actionAbortRef.current = controller;
       try {
         await streamAction(
-          payload,
+          { ...payload, chatHistory: mainChatHistory() },
           llmOptsRef.current,
           (chunk) =>
             updateFrameVariant(sessionId, frameId, key, (v) => ({
@@ -452,7 +460,7 @@ export default function App() {
         if (actionAbortRef.current === controller) actionAbortRef.current = null;
       }
     },
-    [updateFrameVariant, patchFrameVariant]
+    [updateFrameVariant, patchFrameVariant, mainChatHistory]
   );
 
   // Kick off the streamed backend call for a variant.
@@ -681,6 +689,7 @@ export default function App() {
             custom: variant.custom,
             selectedText: frame.selectedText,
             sourceMessageText: frame.sourceMessageText,
+            chatHistory: mainChatHistory(),
             history,
             question: text,
           },
@@ -710,7 +719,7 @@ export default function App() {
         if (actionAbortRef.current === controller) actionAbortRef.current = null;
       }
     },
-    [updateFrameVariant]
+    [updateFrameVariant, mainChatHistory]
   );
 
   const handleStopAction = useCallback(() => actionAbortRef.current?.abort(), []);

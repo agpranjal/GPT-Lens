@@ -428,27 +428,37 @@ body {
   flex-shrink: 0;
 }
 .crumb-close:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
-.modal-close {
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 16px;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 8px;
-  line-height: 1;
-}
-.modal-close:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+.modal-close,
 .modal-maximize {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 14px;
   cursor: pointer;
-  padding: 4px 8px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border-radius: 8px;
   line-height: 1;
+  /* the glyphs are decorative controls, never text to be selected/highlighted */
+  user-select: none;
+  /* never show a focus ring/highlight boundary on these icon buttons */
+  outline: none;
 }
+.modal-close:focus,
+.modal-close:focus-visible,
+.modal-maximize:focus,
+.modal-maximize:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+.modal-close { font-size: 16px; }
+/* the maximize/restore arrow glyph renders narrower than ✕ at the same size,
+   so bump it up to read as the same visual size as the close button */
+.modal-maximize { font-size: 20px; }
+.modal-close:hover,
 .modal-maximize:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
 
 /* content area: fixed meta block on top, scrolling body below */

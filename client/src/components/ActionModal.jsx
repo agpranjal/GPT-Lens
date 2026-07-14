@@ -198,7 +198,10 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
             )}
             <button
               className="modal-maximize"
-              onClick={() => setMaximized((m) => !m)}
+              onClick={(e) => {
+                setMaximized((m) => !m);
+                e.currentTarget.blur();
+              }}
               title={maximized ? "Restore" : "Maximize"}
               aria-label={maximized ? "Restore" : "Maximize"}
             >

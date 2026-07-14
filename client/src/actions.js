@@ -1,6 +1,3 @@
-// Stable key for the experimental "Questions" variant.
-export const QUESTIONS_KEY = "__questions__";
-
 // The standard actions. `action` is the instruction sent to the model verbatim;
 // `label` is the short text shown on the button/chip. Used by the selection
 // popup and the modal's variant chips so they never drift.

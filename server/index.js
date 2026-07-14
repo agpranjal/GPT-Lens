@@ -4,13 +4,11 @@ import cors from "cors";
 import {
   chatStream,
   generateStream,
-  generateText,
   makeReasoningFilter,
 } from "./llm.js";
 import {
   buildActionPrompt,
   resolveInstruction,
-  buildQuestionsPrompt,
 } from "./prompts.js";
 import {
   MODELS,
@@ -185,30 +183,6 @@ app.post("/api/action", async (req, res) => {
     await pipeStream(res, stream);
   } catch (err) {
     handleStreamError(res, err, "/api/action");
-  }
-});
-
-// Suggested questions (experimental). Body: { selectedText, sourceMessageText, model?, reasoning? }
-// Returns { questions: [...] } (non-streaming).
-app.post("/api/questions", async (req, res) => {
-  try {
-    const { selectedText, sourceMessageText } = req.body || {};
-    if (!selectedText || !sourceMessageText) {
-      return res
-        .status(400)
-        .json({ error: "selectedText and sourceMessageText are required" });
-    }
-    const prompt = buildQuestionsPrompt({ sourceMessageText, selectedText });
-    const text = await generateText(prompt, resolveOpts(req.body));
-    const questions = text
-      .split("\n")
-      .map((s) => s.replace(/^[-*\d.)\s]+/, "").trim()) // strip bullets/numbers
-      .filter(Boolean)
-      .slice(0, 12);
-    res.json({ questions });
-  } catch (err) {
-    console.error("/api/questions error:", err);
-    res.status(500).json({ error: err.message || "questions failed" });
   }
 });
 

@@ -560,7 +560,7 @@ body {
   background: rgba(138, 180, 248, 0.14);
   border-color: rgba(138, 180, 248, 0.45);
 }
-.chip.generated:not(.active):not(.chip-special)::before {
+.chip.generated:not(.active)::before {
   content: "✓";
   margin-right: 5px;
   color: var(--accent);
@@ -585,53 +585,6 @@ body {
   outline: none;
 }
 .chip-custom input:focus { border-color: var(--accent); }
-/* the experimental "Questions" chip/button (rendered as a "?") */
-.chip-special {
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 15px;
-  padding: 5px 13px;
-}
-.chip-special.active {
-  background: var(--accent);
-  color: #11243f;
-}
-.popup-special {
-  background: var(--accent) !important;
-  color: #11243f !important;
-  border: none !important;
-  font-weight: 700;
-  font-size: 15px;
-  padding: 6px 13px;
-}
-
-/* questions list (experimental) */
-.questions-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.questions-hint {
-  color: var(--muted);
-  font-size: 13px;
-  margin-bottom: 2px;
-}
-.question-item {
-  text-align: left;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 11px 14px;
-  color: var(--text);
-  font: inherit;
-  cursor: pointer;
-  line-height: 1.4;
-}
-.question-item:hover {
-  border-color: var(--accent);
-  background: rgba(138, 180, 248, 0.08);
-}
 .modal-body {
   padding: 18px 22px 24px;
   overflow-y: auto;

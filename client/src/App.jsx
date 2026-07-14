@@ -8,7 +8,6 @@ import ModelSelector from "./components/ModelSelector.jsx";
 import {
   streamChat,
   streamAction,
-  fetchQuestions,
   fetchModels,
   fetchChats,
   createChat,
@@ -17,29 +16,27 @@ import {
   saveSession,
   deleteSessionApi,
 } from "./api.js";
-import { QUESTIONS_KEY } from "./actions.js";
 
 // Seeded from the clock so ids never collide with ones persisted by an
 // earlier page load (plain ++ from 0 would repeat after a reload).
 let nextId = Date.now();
 
-// Stable key for a variant: questions, custom:<text>, or the action instruction.
-const variantKey = ({ action, custom, questions }) =>
-  questions ? QUESTIONS_KEY : custom ? `custom:${custom}` : action;
+// Stable key for a variant: custom:<text>, or the action instruction.
+const variantKey = ({ action, custom }) =>
+  custom ? `custom:${custom}` : action;
 
 // Build a fresh variant object for a given payload.
-const makeVariant = ({ action, custom, label, questions }) => {
-  const key = variantKey({ action, custom, questions });
+const makeVariant = ({ action, custom, label }) => {
+  const key = variantKey({ action, custom });
   return {
     key,
-    kind: questions ? "questions" : custom ? "custom" : "action",
+    kind: custom ? "custom" : "action",
     action,
     custom,
-    label: label || custom || action || "Questions",
+    label: label || custom || action,
     status: "loading",
     text: "",
     error: "",
-    questions: [],
     // Follow-up chat continuing THIS lens's answer — persists per-variant, so
     // switching chips and coming back keeps the thread where it was left.
     followUps: [], // { id, question, answer, status, error }
@@ -51,6 +48,23 @@ const shorten = (text, n = 44) => {
   const t = (text || "").trim().replace(/\s+/g, " ");
   return t.length > n ? t.slice(0, n) + "…" : t;
 };
+
+// Intersect a viewport rect with a clipping element's box. Our selection
+// highlight is position:fixed at the document root, so without clipping it to
+// the scroll container it lives in, a tall selection paints blocks outside
+// that container (e.g. below the modal). Returns null when there's no overlap.
+const clipRectToEl = (r, clipEl) => {
+  if (!clipEl) return { top: r.top, left: r.left, width: r.width, height: r.height, bottom: r.bottom };
+  const c = clipEl.getBoundingClientRect();
+  const top = Math.max(r.top, c.top);
+  const left = Math.max(r.left, c.left);
+  const right = Math.min(r.right, c.right);
+  const bottom = Math.min(r.bottom, c.bottom);
+  if (right <= left || bottom <= top) return null;
+  return { top, left, width: right - left, height: bottom - top, bottom };
+};
+const clipRectsToEl = (rects, clipEl) =>
+  rects.map((r) => clipRectToEl(r, clipEl)).filter(Boolean);
 
 export default function App() {
   const [messages, setMessages] = useState([]); // { id, role, content }
@@ -193,22 +207,25 @@ export default function App() {
       const anchorEl =
         sel.anchorNode?.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
       const range = sel.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
+      const rawRect = range.getBoundingClientRect();
       // Per-line rects for our own highlight overlay — the native highlight
       // stops being painted once focus moves into the popup's input.
-      const highlightRects = Array.from(range.getClientRects());
+      const rawHighlightRects = Array.from(range.getClientRects());
 
       // Inside the modal: source is the explanation currently shown (drill-down).
-      if (anchorEl?.closest?.("[data-modal-body]")) {
+      const modalBody = anchorEl?.closest?.("[data-modal-body]");
+      if (modalBody) {
         const s = sessionsRef.current.find((x) => x.id === activeIdRef.current);
         if (s) {
           const frame = s.frames[s.index];
           const v = frame.variants[frame.activeKey];
+          // Clip to the scroll container so a tall selection (e.g. selecting a
+          // whole code block) doesn't paint highlight blocks outside the modal.
           setSelection({
             selectedText: text,
             sourceMessageText: v?.text || "",
-            rect,
-            highlightRects,
+            rect: clipRectToEl(rawRect, modalBody) || rawRect,
+            highlightRects: clipRectsToEl(rawHighlightRects, modalBody),
             origin: "modal",
           });
         }
@@ -227,11 +244,12 @@ export default function App() {
         setSelection(null);
         return;
       }
+      const messagesEl = msgEl.closest(".messages");
       setSelection({
         selectedText: text,
         sourceMessageText: source.content,
-        rect,
-        highlightRects,
+        rect: clipRectToEl(rawRect, messagesEl) || rawRect,
+        highlightRects: clipRectsToEl(rawHighlightRects, messagesEl),
         origin: "chat",
       });
     }
@@ -426,34 +444,13 @@ export default function App() {
     [updateFrameVariant, patchFrameVariant]
   );
 
-  // Fetch suggested questions into a frame's questions-variant (non-streaming).
-  const runQuestions = useCallback(
-    async (sessionId, frameId, key, payload) => {
-      try {
-        const { questions } = await fetchQuestions(payload, llmOptsRef.current);
-        patchFrameVariant(sessionId, frameId, key, {
-          status: "done",
-          questions: questions || [],
-        });
-      } catch (err) {
-        patchFrameVariant(sessionId, frameId, key, {
-          status: "error",
-          error: err.message,
-        });
-      }
-    },
-    [patchFrameVariant]
-  );
-
-  // Kick off the right backend call for a variant (questions vs streamed action).
+  // Kick off the streamed backend call for a variant.
   const runVariant = useCallback(
     (sessionId, frameId, payload, snippet) => {
       const key = variantKey(payload);
-      if (payload.questions)
-        return runQuestions(sessionId, frameId, key, snippet);
       return streamIntoVariant(sessionId, frameId, key, { ...payload, ...snippet });
     },
-    [runQuestions, streamIntoVariant]
+    [streamIntoVariant]
   );
 
   // From a selection: start a NEW session (chat origin) or push a drill-down
@@ -618,7 +615,7 @@ export default function App() {
       const frame = s.frames[s.index];
       const key = frame.activeKey;
       const variant = frame.variants[key];
-      if (!variant || variant.kind === "questions") return;
+      if (!variant) return;
 
       const followUpId = ++nextId;
       const history = [

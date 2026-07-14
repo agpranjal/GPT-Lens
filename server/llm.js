@@ -133,20 +133,3 @@ export function generateStream(prompt, opts) {
     ],
   });
 }
-
-// One-shot, non-streaming generation returning the full text (used for questions).
-export async function generateText(prompt, opts) {
-  const { model, reasoning } = resolveParams(opts);
-  const res = await llm().chat.completions.create({
-    model,
-    max_tokens: 1024,
-    reasoning,
-    messages: [
-      { role: "system", content: SYSTEM },
-      { role: "user", content: prompt },
-    ],
-  });
-  const text = res.choices[0]?.message?.content || "";
-  // Strip any reasoning span (non-streaming path).
-  return text.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-}

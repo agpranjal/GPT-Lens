@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Markdown from "./Markdown.jsx";
 import Dots from "./Dots.jsx";
-import { ACTIONS, QUESTIONS_KEY } from "../actions.js";
+import { ACTIONS } from "../actions.js";
 
 function shorten(text, n = 28) {
   const t = (text || "").trim().replace(/\s+/g, " ");
@@ -83,7 +83,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
         }
         return;
       }
-      if (e.key === "/" && !followUpOpen && current.kind !== "questions") {
+      if (e.key === "/" && !followUpOpen) {
         // A selection popup on screen owns "/" (it focuses its own input).
         if (document.querySelector("[data-selection-popup]")) return;
         e.preventDefault();
@@ -95,21 +95,12 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose, onNavigate, onCloseFrame, index, frames.length, followUpOpen, current.kind]);
+  }, [onClose, onNavigate, onCloseFrame, index, frames.length, followUpOpen]);
 
   // Custom variants created on this frame (in creation order), for chips.
   const customKeys = frame.order.filter((k) => frame.variants[k]?.kind === "custom");
 
-  // The "Questions" chip is pinned to the front (never reordered by MRU).
-  const questionsChip = {
-    key: QUESTIONS_KEY,
-    display: "✨ ?",
-    title: "Suggested questions (AI)",
-    payload: { questions: true, label: "Questions" },
-    generated: !!frame.variants[QUESTIONS_KEY],
-    special: true,
-  };
-  // The rest of the chips: standard actions, then customs (these get MRU-sorted).
+  // Chips: standard actions, then customs (these get MRU-sorted).
   const chips = [
     ...ACTIONS.map((a) => ({
       key: a.action,
@@ -132,14 +123,11 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     const i = frame.selectedOrder.indexOf(key);
     return i === -1 ? Infinity : i;
   };
-  const orderedChips = [
-    questionsChip,
-    ...[...chips].sort((x, y) => {
-      const rx = rank(x.key);
-      const ry = rank(y.key);
-      return rx === ry ? 0 : rx - ry;
-    }),
-  ];
+  const orderedChips = [...chips].sort((x, y) => {
+    const rx = rank(x.key);
+    const ry = rank(y.key);
+    return rx === ry ? 0 : rx - ry;
+  });
 
   function submitCustom(e) {
     e.preventDefault();
@@ -236,7 +224,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
                 key={c.key}
                 className={`chip${c.key === frame.activeKey ? " active" : ""}${
                   c.generated ? " generated" : ""
-                }${c.special ? " chip-special" : ""}`}
+                }`}
                 onClick={() => onVariant(c.payload)}
                 title={c.title || c.display}
               >
@@ -264,42 +252,26 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
             {current.status === "error" && (
               <div className="error">⚠️ {current.error}</div>
             )}
-            {current.kind === "questions"
-              ? current.status === "done" && (
-                  <div className="questions-list">
-                    <div className="questions-hint">Pick a question to explore:</div>
-                    {current.questions.map((q, i) => (
-                      <button
-                        key={i}
-                        className="question-item"
-                        onClick={() => onVariant({ custom: q, label: q })}
-                      >
-                        {q}
-                      </button>
-                    ))}
+            {(current.status === "streaming" || current.status === "done") && (
+              <>
+                <Markdown>{current.text || ""}</Markdown>
+                {current.followUps?.map((f) => (
+                  <div key={f.id} className="followup">
+                    <div className="followup-q">{f.question}</div>
+                    <div className="followup-a">
+                      {f.status === "loading" && <Dots />}
+                      {f.status === "error" && <div className="error">⚠️ {f.error}</div>}
+                      {(f.status === "streaming" || f.status === "done") && (
+                        <Markdown>{f.answer || ""}</Markdown>
+                      )}
+                    </div>
                   </div>
-                )
-              : (current.status === "streaming" || current.status === "done") && (
-                  <>
-                    <Markdown>{current.text || ""}</Markdown>
-                    {current.followUps?.map((f) => (
-                      <div key={f.id} className="followup">
-                        <div className="followup-q">{f.question}</div>
-                        <div className="followup-a">
-                          {f.status === "loading" && <Dots />}
-                          {f.status === "error" && <div className="error">⚠️ {f.error}</div>}
-                          {(f.status === "streaming" || f.status === "done") && (
-                            <Markdown>{f.answer || ""}</Markdown>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
+                ))}
+              </>
+            )}
           </div>
 
-          {current.kind !== "questions" && (
-            <div ref={dockRef} className={`followup-dock${followUpOpen ? " open" : ""}`}>
+          <div ref={dockRef} className={`followup-dock${followUpOpen ? " open" : ""}`}>
               <button
                 type="button"
                 className="followup-fab"
@@ -321,8 +293,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
                   Send
                 </button>
               </form>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>

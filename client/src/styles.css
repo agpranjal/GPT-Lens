@@ -391,17 +391,6 @@ textarea:focus-visible {
   gap: 8px;
   flex-shrink: 0;
 }
-.modal-stop {
-  background: #c84b4b;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 5px 12px;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-.modal-stop:hover { background: #d65a5a; }
 /* breadcrumb trail rendered as browser-style tabs */
 .modal-tabs {
   display: flex;

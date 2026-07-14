@@ -773,8 +773,6 @@ export default function App() {
     [updateFrameVariant, mainChatHistory]
   );
 
-  const handleStopAction = useCallback(() => actionAbortRef.current?.abort(), []);
-
   // ---- session persistence (write-through, debounced) ----
   // Saves each session whenever it settles: skipped while anything inside is
   // still streaming (the status flip to done/error re-triggers the effect).
@@ -886,7 +884,6 @@ export default function App() {
           onNavigate={handleNavigate}
           onVariant={handleVariant}
           onAskFollowUp={handleAskFollowUp}
-          onStop={handleStopAction}
           onCloseFrame={handleCloseFrame}
         />
       )}

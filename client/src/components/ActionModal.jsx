@@ -74,6 +74,15 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
       }
       const tag = e.target.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
+      // Cmd/Ctrl+X closes the current tab (never the first — that's the root).
+      // Placed after the input guard so Cmd+X still cuts text inside inputs.
+      if ((e.metaKey || e.ctrlKey) && (e.key === "x" || e.key === "X")) {
+        if (index > 0) {
+          e.preventDefault();
+          onCloseFrame(index);
+        }
+        return;
+      }
       if (e.key === "/" && !followUpOpen && current.kind !== "questions") {
         // A selection popup on screen owns "/" (it focuses its own input).
         if (document.querySelector("[data-selection-popup]")) return;
@@ -86,7 +95,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose, onNavigate, index, frames.length, followUpOpen, current.kind]);
+  }, [onClose, onNavigate, onCloseFrame, index, frames.length, followUpOpen, current.kind]);
 
   // Custom variants created on this frame (in creation order), for chips.
   const customKeys = frame.order.filter((k) => frame.variants[k]?.kind === "custom");
@@ -163,31 +172,32 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
         }}
       >
         <header className="modal-header">
-          <nav className="modal-breadcrumbs">
+          <nav className="modal-tabs" role="tablist">
             {frames.map((f, i) => (
-              <span key={f.id} className="crumb-wrap" ref={i === index ? activeCrumbRef : null}>
-                {i > 0 && <span className="crumb-sep">›</span>}
-                <button
-                  className={`crumb${i === index ? " active" : ""}`}
-                  onClick={() => onNavigate(i)}
-                  title={f.selectedText}
-                >
-                  {shorten(f.selectedText)}
-                </button>
+              <div
+                key={f.id}
+                className={`modal-tab${i === index ? " active" : ""}`}
+                ref={i === index ? activeCrumbRef : null}
+                onClick={() => onNavigate(i)}
+                title={f.selectedText}
+                role="tab"
+                aria-selected={i === index}
+              >
+                <span className="modal-tab-label">{shorten(f.selectedText)}</span>
                 {i > 0 && (
                   <button
-                    className="crumb-close"
+                    className="modal-tab-close"
                     onClick={(e) => {
                       e.stopPropagation();
                       onCloseFrame(i);
                     }}
-                    title="Remove this breadcrumb"
-                    aria-label="Remove this breadcrumb"
+                    title="Close tab (⌘X)"
+                    aria-label="Close tab"
                   >
                     ✕
                   </button>
                 )}
-              </span>
+              </div>
             ))}
           </nav>
           <div className="modal-actions">

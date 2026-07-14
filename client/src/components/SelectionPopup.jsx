@@ -15,6 +15,9 @@ export default function SelectionPopup({ rect, onAction }) {
     const { width, height } = el.getBoundingClientRect();
     let top = rect.top - height - 8;
     if (top < 8) top = rect.bottom + 8; // flip below if no room above
+    // Keep the popup fully on-screen even for very tall selections (e.g. a
+    // whole code block), where "below" would otherwise land under the composer.
+    top = Math.max(8, Math.min(top, window.innerHeight - height - 8));
     let left = rect.left + rect.width / 2 - width / 2;
     left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
     setPos({ top, left, ready: true });

@@ -41,11 +41,15 @@ function Pre(props) {
 
   return (
     <div className="codeblock">
-      {/* pre comes FIRST in DOM order: the action buttons are positioned in the
-          corner but must sit AFTER the code content, so selecting from text
-          above the block down into the code never sweeps the buttons into the
-          selection range (which would paint the highlight over them). */}
-      <pre ref={preRef} {...props} />
+      {/* <pre> lives in its own wrapper so a triple-click (which extends the
+          selection to the block boundary) stops at .codeblock-body — the
+          action buttons are a SIBLING of that wrapper, outside the selectable
+          block, so they can never be swept into (and highlighted by) a
+          selection of the code, whether it starts above, below, or is a
+          triple-click on the first/last line. */}
+      <div className="codeblock-body">
+        <pre ref={preRef} {...props} />
+      </div>
       <div className="codeblock-actions">
       <button
         type="button"

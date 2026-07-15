@@ -699,6 +699,11 @@ textarea:focus-visible {
   align-items: center;
   gap: 6px;
   z-index: 1;
+  /* Sits before <pre> in DOM order despite being positioned in the corner
+     visually, so a drag/triple-click selection spanning into the code block
+     from text above it would otherwise sweep through and highlight these
+     icon buttons too. They're controls, never text to select. */
+  user-select: none;
 }
 .codeblock-copy,
 .codeblock-select {

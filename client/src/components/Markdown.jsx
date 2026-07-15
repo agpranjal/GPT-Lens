@@ -41,6 +41,11 @@ function Pre(props) {
 
   return (
     <div className="codeblock">
+      {/* pre comes FIRST in DOM order: the action buttons are positioned in the
+          corner but must sit AFTER the code content, so selecting from text
+          above the block down into the code never sweeps the buttons into the
+          selection range (which would paint the highlight over them). */}
+      <pre ref={preRef} {...props} />
       <div className="codeblock-actions">
       <button
         type="button"
@@ -102,7 +107,6 @@ function Pre(props) {
         )}
       </button>
       </div>
-      <pre ref={preRef} {...props} />
     </div>
   );
 }

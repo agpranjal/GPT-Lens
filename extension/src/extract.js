@@ -4,7 +4,10 @@
 import { Readability } from '@mozilla/readability'
 import TurndownService from 'turndown'
 
-const MAX_CHARS = 50000
+// Raised from 50k: on a long technical chat (lots of code/output pasted back
+// and forth) that cap was routinely hit well before the end of the
+// conversation, silently dropping everything after it.
+const MAX_CHARS = 200000
 
 function makeTurndown() {
   const turndown = new TurndownService()
@@ -37,16 +40,99 @@ function cleanMarkdown(md) {
     .trim()
 }
 
+// Icon fonts (toolbar buttons, etc.) render via ligatures over Private Use
+// Area codepoints — meaningless outside the page that has that font loaded,
+// where they show up as tofu boxes. innerText picks them up because they're
+// real (if invisible-until-hover) rendered text, not something CSS can hide
+// from the DOM tree. Strip PUA codepoints from the BMP and both supplementary
+// PUA planes, then collapse whatever stray whitespace that leaves behind.
+const PUA_RANGES = '\\uE000-\\uF8FF\\u{F0000}-\\u{FFFFD}\\u{100000}-\\u{10FFFD}'
+const PUA_GLYPH_RE = new RegExp('[' + PUA_RANGES + ']', 'gu')
+function stripIconGlyphs(text) {
+  return text
+    .replace(PUA_GLYPH_RE, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+}
+
+// claude.ai renders every conversation turn as a `[data-testid="user-message"]`
+// (human side) or a sibling block (Claude's side), all under one shared list
+// container. Readability treats the whole page as a single scored "article",
+// which happens to work for short chats but isn't something to rely on for
+// long, code-heavy ones — walking the actual turn structure instead
+// guarantees every turn makes it into the export.
+function extractClaudeConversation() {
+  const userMsgs = document.querySelectorAll('[data-testid="user-message"]')
+  if (userMsgs.length === 0) return null
+
+  // Finding the turn-list container works by climbing from an anchor until
+  // it contains every anchor — which needs at least two anchors spread
+  // across different turns to force the climb past same-turn wrapper divs
+  // that also happen to have >1 child (e.g. an avatar+bubble split). A
+  // single-question chat has only one `user-message`, so pair it with
+  // `action-bar-retry` (present once per Claude turn, including the first)
+  // to guarantee a second, independent anchor even then.
+  const anchors = [...userMsgs, ...document.querySelectorAll('[data-testid="action-bar-retry"]')]
+
+  let ancestor = anchors[0].parentElement
+  while (ancestor && !anchors.every((el) => ancestor.contains(el))) {
+    ancestor = ancestor.parentElement
+  }
+  if (!ancestor) return null
+
+  // Each anchor node sits several levels inside its turn wrapper; climb from
+  // it to the direct child of `ancestor` that contains it — that child is
+  // one turn (user or assistant) among the turn siblings.
+  function turnWrapperFor(node) {
+    let el = node
+    while (el.parentElement !== ancestor) el = el.parentElement
+    return el
+  }
+  const turns = Array.from(ancestor.children)
+  if (!turns.includes(turnWrapperFor(anchors[0])) || turns.length < userMsgs.length) return null
+
+  const lines = turns
+    .map((turn) => {
+      const isUser = !!turn.querySelector('[data-testid="user-message"]')
+      // innerText needs the node attached with real layout to compute line
+      // breaks correctly, so read it straight off the live turn node — the
+      // per-message toolbar's icon-font glyphs get filtered out later by
+      // stripIconGlyphs instead of by removing those buttons here.
+      const paragraphs = (turn.innerText || '')
+        .split(/\n{2,}/)
+        .map((p) => p.trim())
+        .filter(Boolean)
+      // The first paragraph is an accessibility-label echo ("You said: …" /
+      // "Claude responded: …") that duplicates a (sometimes truncated)
+      // prefix of the paragraph right after it — drop it when that holds,
+      // keeping only the real message text.
+      if (paragraphs.length > 1) {
+        const label = paragraphs[0].replace(/^(you said|claude responded):\s*/i, '')
+        const echoedPrefix = label.replace(/\.\.\.$/, '').slice(0, 30).toLowerCase()
+        if (echoedPrefix && paragraphs[1].toLowerCase().startsWith(echoedPrefix)) paragraphs.shift()
+      }
+      const text = paragraphs.join('\n\n').trim()
+      return text ? `**${isUser ? 'You' : 'Claude'}:** ${text}` : null
+    })
+    .filter(Boolean)
+
+  return lines.length ? lines.join('\n\n---\n\n') : null
+}
+
 function extract() {
   try {
+    if (/(^|\.)claude\.ai$/.test(location.hostname)) {
+      const conversation = extractClaudeConversation()
+      if (conversation) return { title: document.title || '', markdown: stripIconGlyphs(conversation) }
+    }
     const clone = document.cloneNode(true)
     const article = new Readability(clone).parse()
     const markdown = article?.content
       ? cleanMarkdown(makeTurndown().turndown(article.content))
       : document.body.innerText || ''
-    return { title: article?.title || document.title || '', markdown }
+    return { title: article?.title || document.title || '', markdown: stripIconGlyphs(markdown) }
   } catch {
-    return { title: document.title || '', markdown: document.body.innerText || '' }
+    return { title: document.title || '', markdown: stripIconGlyphs(document.body.innerText || '') }
   }
 }
 

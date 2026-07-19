@@ -513,6 +513,9 @@ export default function App() {
         id: frameId,
         selectedText,
         sourceMessageText,
+        // The breadcrumb shows the lens (action/prompt), not the snippet —
+        // same reasoning as handleVariant's newFrame below.
+        tabLabel: variant.label,
         variants: { [key]: variant },
         order: [key],
         selectedOrder: [key], // chip display order, most-recently-clicked first

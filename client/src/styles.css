@@ -717,6 +717,10 @@ textarea:focus-visible {
   border-radius: 6px;
 }
 .codeblock:hover .codeblock-actions { pointer-events: auto; }
+/* Set by the selection guard in Markdown.jsx while a text selection overlaps
+   this block: drop the toolbar entirely so its buttons can never be painted as
+   part of the selection (a non-rendered control cannot be highlighted). */
+.codeblock.selecting .codeblock-actions { display: none; }
 .codeblock-copy,
 .codeblock-select {
   display: flex;

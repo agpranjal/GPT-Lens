@@ -2,6 +2,33 @@ import { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+// While a text selection overlaps a code block, hide that block's action
+// toolbar. The buttons are absolutely positioned but still live *inside*
+// .codeblock, so a selection entering the block from either side — the heading
+// line above it, or a triple-click on the last/only line that extends to the
+// block boundary — sweeps them into the range, and some browsers (Chrome on
+// macOS) then paint the buttons as "selected". DOM order can't win: whichever
+// edge the buttons sit at, a selection from that side reaches them. A control
+// that isn't rendered can't be highlighted, and you're never clicking copy
+// mid-selection — so we drop the toolbar for the duration of the overlap.
+// Installed once for the whole document. The work is light (browsers already
+// throttle selectionchange to ~frame rate) and runs synchronously so it holds
+// even when requestAnimationFrame is paused (e.g. a backgrounded tab).
+if (typeof document !== "undefined" && !window.__codeblockSelectionGuard) {
+  window.__codeblockSelectionGuard = true;
+  document.addEventListener("selectionchange", () => {
+    const sel = window.getSelection();
+    const range =
+      sel && sel.rangeCount > 0 && !sel.isCollapsed ? sel.getRangeAt(0) : null;
+    document.querySelectorAll(".codeblock").forEach((cb) => {
+      cb.classList.toggle(
+        "selecting",
+        range ? range.intersectsNode(cb) : false
+      );
+    });
+  });
+}
+
 // Code block with hover buttons (top-right corner): "select" and "copy".
 function Pre(props) {
   const preRef = useRef(null);

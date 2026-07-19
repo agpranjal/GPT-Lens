@@ -15,6 +15,7 @@ import {
   deleteChat,
   saveSession,
   deleteSessionApi,
+  addChatMessage,
 } from "./api.js";
 
 // Seeded from the clock so ids never collide with ones persisted by an
@@ -288,6 +289,36 @@ export default function App() {
       document.removeEventListener("mouseup", onMouseUp);
     };
   }, []);
+
+  // Import from the browser extension: its bridge script posts the page's
+  // extracted content into this window once, after which we spin up a fresh
+  // chat seeded with it as a "source" message (see Message.jsx) so the
+  // existing selection/drill-down flow works on it unchanged.
+  useEffect(() => {
+    async function onMessage(e) {
+      if (e.source !== window) return;
+      if (e.data?.source !== "skillmaxx-extension" || e.data?.type !== "import") return;
+      const { title, content } = e.data.payload || {};
+      if (!content) return;
+      abortRef.current?.abort();
+      actionAbortRef.current?.abort();
+      try {
+        const chat = await createChat(shorten(title || content, 80));
+        await addChatMessage(chat.id, "source", content);
+        // Same dedupe-by-id rationale as handleSend above.
+        setChats((cs) => [chat, ...cs.filter((c) => c.id !== chat.id)]);
+        setMessages([{ id: ++nextId, role: "source", content }]);
+        setSessions([]);
+        setActiveId(null);
+        setChatId(chat.id);
+        focusComposer();
+      } catch (err) {
+        console.error("failed to import page:", err);
+      }
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [focusComposer]);
 
   const handleSend = useCallback(async (prompt) => {
     const userMsg = { id: ++nextId, role: "user", content: prompt };

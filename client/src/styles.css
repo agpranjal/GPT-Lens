@@ -209,6 +209,14 @@ textarea:focus-visible {
   background: rgba(138, 180, 248, 0.4);
 }
 
+/* source: page content imported from the browser extension — a bordered
+   card so it reads as "reference material", not an assistant reply. */
+.message.source {
+  border: 1px solid var(--border, #333);
+  border-radius: 12px;
+  padding: 16px 20px;
+}
+
 /* ---- composer ---- */
 .composer {
   flex-shrink: 0;
@@ -662,6 +670,12 @@ textarea:focus-visible {
 .markdown li > p { margin: 0; }
 .markdown a { color: var(--accent); }
 .markdown strong { font-weight: 650; }
+.markdown img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 4px 0 12px;
+}
 .markdown blockquote {
   margin: 0 0 12px;
   padding: 2px 14px;

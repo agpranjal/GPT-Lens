@@ -51,6 +51,13 @@ export const saveSession = (session) =>
     method: "PUT",
     body: JSON.stringify({ chatId: session.chatId, data: session }),
   });
+// Add a single message directly, without triggering an LLM call — used to
+// seed a fresh chat with content the extension imported from a page.
+export const addChatMessage = (chatId, role, content) =>
+  json(`/api/chats/${chatId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ role, content }),
+  });
 export const deleteSessionApi = (id) => json(`/api/sessions/${id}`, { method: "DELETE" });
 
 // messages: [{ role: "user" | "assistant", content }]

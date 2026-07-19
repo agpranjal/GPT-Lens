@@ -8,6 +8,7 @@ node_modules/
 
 # build output
 client/dist/
+extension/dist/
 
 # logs
 *.log

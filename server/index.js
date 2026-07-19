@@ -133,6 +133,18 @@ app.delete("/api/chats/:id", (req, res) => {
   res.json({ ok: true });
 });
 
+// Add a single message directly, without an LLM call — used to seed a chat
+// with content that wasn't generated in this app (e.g. a page imported from
+// the browser extension).
+app.post("/api/chats/:id/messages", (req, res) => {
+  const chatId = Number(req.params.id);
+  if (!chatExists(chatId)) return res.status(404).json({ error: "chat not found" });
+  const { role, content } = req.body || {};
+  if (!role || !content) return res.status(400).json({ error: "role and content are required" });
+  addMessage(chatId, role, content);
+  res.json({ ok: true });
+});
+
 // Write-through save of a modal session (client sends the whole tree).
 app.put("/api/sessions/:id", (req, res) => {
   const { chatId, data } = req.body || {};

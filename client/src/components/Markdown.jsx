@@ -41,15 +41,14 @@ function Pre(props) {
 
   return (
     <div className="codeblock">
-      {/* <pre> lives in its own wrapper so a triple-click (which extends the
-          selection to the block boundary) stops at .codeblock-body — the
-          action buttons are a SIBLING of that wrapper, outside the selectable
-          block, so they can never be swept into (and highlighted by) a
-          selection of the code, whether it starts above, below, or is a
-          triple-click on the first/last line. */}
-      <div className="codeblock-body">
-        <pre ref={preRef} {...props} />
-      </div>
+      {/* The action buttons are rendered BEFORE the code in DOM order on
+          purpose. A triple-click on the last (or only) line anchors the
+          selection at that line's start and extends it to the END of this
+          .codeblock container — so any element sitting AFTER the code gets
+          swept into the range and painted as selected. Placing the buttons
+          ahead of the code keeps them before that anchor point, so a code
+          selection can never reach them. They're positioned back into the
+          top-right corner visually via `position: absolute`. */}
       <div className="codeblock-actions">
       <button
         type="button"
@@ -110,6 +109,9 @@ function Pre(props) {
           </svg>
         )}
       </button>
+      </div>
+      <div className="codeblock-body">
+        <pre ref={preRef} {...props} />
       </div>
     </div>
   );

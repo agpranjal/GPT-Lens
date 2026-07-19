@@ -22,8 +22,8 @@ function resolveParams({ model, reasoning } = {}) {
 
 // Applied to every request (chat + actions).
 const SYSTEM = [
-  "Do not use analogies in your answers.",
-  "Always include at least one concrete example illustrating the actual thing being",
+  "DO NOT use analogies in your answers.",
+  "While giving examples - include concrete example(s) illustrating the actual thing being",
   "explained (real code, real data, a real scenario) — never a hypothetical stand-in",
   "or analogy from an unrelated domain.",
   "Always answer to the best of your ability using the provided context and your own knowledge.",

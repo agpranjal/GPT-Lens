@@ -704,7 +704,14 @@ textarea:focus-visible {
      from text above it would otherwise sweep through and highlight these
      icon buttons too. They're controls, never text to select. */
   user-select: none;
+  /* This box sits on top of the code's top-right corner even while its
+     buttons are invisible (opacity 0) — without this, clicking/triple-
+     clicking there (e.g. the last line of a short block) hits this wrapper
+     instead of passing through to the code text underneath. Re-enabled on
+     hover so the now-visible buttons stay clickable. */
+  pointer-events: none;
 }
+.codeblock:hover .codeblock-actions { pointer-events: auto; }
 .codeblock-copy,
 .codeblock-select {
   display: flex;

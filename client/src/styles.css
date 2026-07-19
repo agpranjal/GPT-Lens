@@ -699,10 +699,6 @@ textarea:focus-visible {
   align-items: center;
   gap: 6px;
   z-index: 1;
-  /* Sits before <pre> in DOM order despite being positioned in the corner
-     visually, so a drag/triple-click selection spanning into the code block
-     from text above it would otherwise sweep through and highlight these
-     icon buttons too. They're controls, never text to select. */
   user-select: none;
   /* This box sits on top of the code's top-right corner even while its
      buttons are invisible (opacity 0) — without this, clicking/triple-
@@ -710,6 +706,15 @@ textarea:focus-visible {
      instead of passing through to the code text underneath. Re-enabled on
      hover so the now-visible buttons stay clickable. */
   pointer-events: none;
+  /* Long code lines scroll UNDER these pinned buttons (pre is overflow-x:auto).
+     When such a line is selected, the browser paints the selection highlight
+     on that text — and it would bleed up through the translucent buttons,
+     making the controls LOOK selected. An opaque background matching the code
+     block (.markdown pre) masks the highlight so nothing shows through the
+     button faces or the gap between them. Keep this color in sync with
+     `.markdown pre`. */
+  background: #1a1a1a;
+  border-radius: 6px;
 }
 .codeblock:hover .codeblock-actions { pointer-events: auto; }
 .codeblock-copy,

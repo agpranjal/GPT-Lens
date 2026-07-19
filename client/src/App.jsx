@@ -338,7 +338,10 @@ export default function App() {
         const chat = await createChat(shorten(prompt, 60));
         currentChatId = chat.id;
         setChatId(chat.id);
-        setChats((cs) => [chat, ...cs]);
+        // Dedupe by id: a concurrent fetchChats() refresh (e.g. from another
+        // send finishing) could otherwise already have this chat in state by
+        // the time this resolves, producing two rows for one chat id.
+        setChats((cs) => [chat, ...cs.filter((c) => c.id !== chat.id)]);
       } catch {
         currentChatId = null;
       }

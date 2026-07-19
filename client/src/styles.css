@@ -888,11 +888,14 @@ textarea:focus-visible {
   cursor: pointer;
   background: var(--user-bubble);
 }
-.panel-item:hover { border-color: var(--accent); }
+/* Hover must never look like active (same border color would make an
+   idle-but-hovered row indistinguishable from the actually-open chat). */
+.panel-item:hover { background: rgba(255, 255, 255, 0.06); }
 .panel-item.active {
   border-color: var(--accent);
   background: rgba(138, 180, 248, 0.12);
 }
+.panel-item.active:hover { background: rgba(138, 180, 248, 0.18); }
 .panel-item-text { min-width: 0; flex: 1; }
 .panel-item-title {
   font-size: 13px;

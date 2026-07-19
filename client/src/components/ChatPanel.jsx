@@ -1,5 +1,7 @@
 // Collapsible left rail listing stored chats (most recently updated first).
 // Same slide-open-on-hover behavior as the sessions rail on the right.
+import { useEffect, useRef, useState } from "react";
+import { searchChats } from "../api.js";
 
 function ChatsIcon() {
   return (
@@ -38,6 +40,15 @@ function dayGroup(ts) {
   return "Earlier";
 }
 
+// Pull the first ~120 chars around the query match for the result snippet.
+function makeSnippet(content, query) {
+  const idx = content.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return content.slice(0, 120);
+  const start = Math.max(0, idx - 40);
+  const end = Math.min(content.length, idx + query.length + 80);
+  return (start > 0 ? "…" : "") + content.slice(start, end) + (end < content.length ? "…" : "");
+}
+
 export default function ChatPanel({
   chats,
   activeId,
@@ -48,6 +59,28 @@ export default function ChatPanel({
   onOpen,
   onDelete,
 }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const debounceRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) { setResults([]); return; }
+    clearTimeout(debounceRef.current);
+    setSearching(true);
+    debounceRef.current = setTimeout(() => {
+      searchChats(q)
+        .then(({ results }) => setResults(results))
+        .catch(() => setResults([]))
+        .finally(() => setSearching(false));
+    }, 250);
+    return () => clearTimeout(debounceRef.current);
+  }, [query]);
+
+  const isSearching = query.trim().length > 0;
+
   return (
     <aside
       className={`side-panel left${collapsed ? " collapsed" : ""}`}
@@ -62,13 +95,49 @@ export default function ChatPanel({
 
       <div className="panel-body">
         <div className="panel-header">
-          <span className="panel-title">Chats {chats.length > 0 && `(${chats.length})`}</span>
+          <span className="panel-title">Chats {!isSearching && chats.length > 0 && `(${chats.length})`}</span>
           <button className="panel-new" onClick={onNewChat} title="New chat">
             + New
           </button>
         </div>
+
+        <div className="panel-search-wrap">
+          <input
+            ref={inputRef}
+            className="panel-search"
+            type="text"
+            placeholder="Search chats…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Escape" && setQuery("")}
+          />
+          {isSearching && (
+            <button className="panel-search-clear" onClick={() => { setQuery(""); inputRef.current?.focus(); }} aria-label="Clear search">✕</button>
+          )}
+        </div>
+
         <div className="panel-list">
-          {chats.length === 0 ? (
+          {isSearching ? (
+            searching ? (
+              <div className="panel-empty">Searching…</div>
+            ) : results.length === 0 ? (
+              <div className="panel-empty">No results for "{query}"</div>
+            ) : (
+              results.map((r) => (
+                <div
+                  key={r.chatId}
+                  className={`panel-item${r.chatId === activeId ? " active" : ""}`}
+                  onClick={() => onOpen(r.chatId)}
+                  title={r.title}
+                >
+                  <div className="panel-item-text">
+                    <div className="panel-item-title">{r.title}</div>
+                    <div className="panel-item-sub">{makeSnippet(r.snippet, query.trim())}</div>
+                  </div>
+                </div>
+              ))
+            )
+          ) : chats.length === 0 ? (
             <div className="panel-empty">Your chats will appear here once you send a message.</div>
           ) : (
             chats.map((c, i) => {

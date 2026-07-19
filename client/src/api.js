@@ -40,6 +40,7 @@ async function json(url, opts = {}) {
 }
 
 // ---- chat persistence ----
+export const searchChats = (q) => json(`/api/search?q=${encodeURIComponent(q)}`);
 export const fetchChats = () => json("/api/chats");
 export const createChat = (title) =>
   json("/api/chats", { method: "POST", body: JSON.stringify({ title }) });

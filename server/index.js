@@ -25,6 +25,7 @@ import {
   addMessage,
   upsertSession,
   deleteSession,
+  searchMessages,
 } from "./db.js";
 
 // Pull { model, reasoning } out of a request body, validating each against
@@ -106,6 +107,12 @@ function handleStreamError(res, err, where) {
 }
 
 // ---- chat persistence ----
+
+app.get("/api/search", (req, res) => {
+  const q = (req.query.q || "").trim();
+  if (!q) return res.json({ results: [] });
+  res.json({ results: searchMessages(q) });
+});
 
 app.get("/api/chats", (_req, res) => res.json({ chats: listChats() }));
 

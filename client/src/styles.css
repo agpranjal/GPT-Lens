@@ -908,3 +908,38 @@ textarea:focus-visible {
 }
 .panel-item:hover .panel-item-del { opacity: 1; }
 .panel-item-del:hover { color: #ff7676; background: rgba(255, 255, 255, 0.06); }
+
+/* search bar inside the chats panel */
+.panel-search-wrap {
+  position: relative;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.panel-search {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--user-bubble);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 6px 28px 6px 10px;
+  outline: none;
+}
+.panel-search::placeholder { color: var(--muted); }
+.panel-search:focus { border-color: var(--accent); }
+.panel-search-clear {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+}
+.panel-search-clear:hover { color: var(--text); }

@@ -96,3 +96,18 @@ export function upsertSession(id, chatId, data) {
 export function deleteSession(id) {
   db.prepare("DELETE FROM sessions WHERE id = ?").run(String(id));
 }
+
+export function searchMessages(query) {
+  const q = `%${query}%`;
+  return db
+    .prepare(
+      `SELECT c.id AS chatId, c.title, m.content AS snippet, c.updated_at
+       FROM messages m
+       JOIN chats c ON c.id = m.chat_id
+       WHERE m.content LIKE ? OR c.title LIKE ?
+       GROUP BY c.id
+       ORDER BY c.updated_at DESC
+       LIMIT 30`
+    )
+    .all(q, q);
+}

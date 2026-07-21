@@ -3,6 +3,7 @@
 // standalone — not a persistent content script.
 import { Readability } from '@mozilla/readability'
 import TurndownService from 'turndown'
+import { gfm } from 'turndown-plugin-gfm'
 
 // Raised from 50k: on a long technical chat (lots of code/output pasted back
 // and forth) that cap was routinely hit well before the end of the
@@ -10,7 +11,11 @@ import TurndownService from 'turndown'
 const MAX_CHARS = 200000
 
 function makeTurndown() {
-  const turndown = new TurndownService()
+  const turndown = new TurndownService({ codeBlockStyle: 'fenced' })
+  // Tables, strikethrough, task lists — the app's renderer (remark-gfm) reads
+  // this same dialect, so this is what makes an imported table look like a
+  // table instead of flattened prose.
+  turndown.use(gfm)
   // Default link rule emits the anchor's raw text content, newlines and all.
   // Real-world nav/card markup often wraps block-level or multi-line content
   // in a single <a>, which then breaks `[text](url)` across lines — an
@@ -24,6 +29,39 @@ function makeTurndown() {
       const text = (node.textContent || '').replace(/\s+/g, ' ').trim()
       if (!text) return content // e.g. an image-only link — leave as-is
       return `[${text}](${href})`
+    },
+  })
+  // Turndown's built-in fenced-code rule only fires when a <pre>'s DIRECT
+  // child is <code> and reads the language off *that* code element's class.
+  // Neither claude.ai nor chatgpt.com renders that plainly: both wrap the
+  // code in several layers of syntax-highlighting chrome (a header bar with
+  // the language name + copy button, then the code somewhere inside), so the
+  // built-in rule never matches and the block would fall through as
+  // unstructured text. Added after `.use(gfm)` so it takes precedence over
+  // that plugin's own code-block rule too.
+  turndown.addRule('codeBlock', {
+    filter: (node) => node.nodeName === 'PRE' && !!node.querySelector('code'),
+    replacement(content, node) {
+      const code = node.querySelector('code')
+      let language = (code.className.match(/language-(\S+)/) || [null, ''])[1]
+      if (!language) {
+        // No language class (chatgpt.com's <code> has none) — the language
+        // name is rendered as its own plain-text label in that header bar,
+        // which is always the first non-empty text encountered walking the
+        // block *before* reaching the code itself.
+        const walker = node.ownerDocument.createTreeWalker(node, NodeFilter.SHOW_TEXT)
+        let textNode
+        while ((textNode = walker.nextNode())) {
+          if (code.contains(textNode)) break
+          const t = textNode.textContent.trim()
+          if (t) {
+            language = t.toLowerCase()
+            break
+          }
+        }
+      }
+      const codeText = code.textContent.replace(/\n$/, '')
+      return `\n\n\`\`\`${language || ''}\n${codeText}\n\`\`\`\n\n`
     },
   })
   return turndown
@@ -53,6 +91,52 @@ function stripIconGlyphs(text) {
     .replace(PUA_GLYPH_RE, '')
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
+}
+
+// Converts one conversation turn to markdown via turndown rather than
+// innerText: innerText collapses everything to plain lines, which loses code
+// fences, tables, bold/italic, and list structure entirely — exactly the
+// "why doesn't this render like the original" complaint. Operating on a
+// *cloned* subtree (rather than the live node, as the old innerText approach
+// needed for correct line-break layout) is safe here because turndown reads
+// DOM structure, not rendered layout, so a detached clone converts exactly
+// the same as the attached original.
+function turnToMarkdown(turnEl) {
+  const clone = turnEl.cloneNode(true)
+  // Accessibility-only elements: screen-reader headings and the "You said: …"
+  // / "Claude responded: …" echo of the message used for a11y announcements.
+  // Never visible to a sighted user reading the page, so they don't belong
+  // in a "print it as it looks" export either.
+  clone.querySelectorAll('.sr-only').forEach((el) => el.remove())
+  // Hover-reveal action-bar row (timestamp + copy/retry/etc. buttons) —
+  // invisible until hover, but still real DOM text turndown would otherwise
+  // pick up. No-op on chatgpt.com, whose action bar lives outside the turn
+  // node entirely.
+  clone.querySelectorAll('[class*="opacity-0"]').forEach((el) => el.remove())
+  // claude.ai's code-block language label ("bash") sits in its own header
+  // <div>, a sibling *before* the <pre>'s parent — not nested inside the
+  // <pre> the way chatgpt.com's is (where the codeBlock rule in makeTurndown
+  // already picks the language out of it). Left alone, turndown treats that
+  // header as ordinary prose and prints "bash" as its own line above the
+  // code block, duplicating the language tag the fence already carries.
+  // No-op on chatgpt.com, where this sibling doesn't exist.
+  clone.querySelectorAll('pre').forEach((pre) => {
+    pre.parentElement?.previousElementSibling?.remove()
+  })
+  // Images: turndown's default rule would emit `![alt](src)`, but claude.ai
+  // and chatgpt.com serve these from session-scoped blob:/signed URLs this
+  // app can never resolve — that markdown would just render as a permanently
+  // broken image icon. Drop the image rather than show that; the caption or
+  // surrounding text (if any) still comes through fine on its own.
+  clone.querySelectorAll('img').forEach((el) => el.remove())
+  // Math (KaTeX, used by both sites): what's actually visible on the page is
+  // dozens of tiny per-glyph spans with no real word boundaries — reading
+  // that as text produces unreadable symbol soup, not a formula. The clean
+  // LaTeX source does sit alongside it in a screen-reader-only annotation,
+  // but this app has no LaTeX renderer to display it properly either, so the
+  // honest option is to drop the formula rather than show broken math.
+  clone.querySelectorAll('.katex, math').forEach((el) => el.remove())
+  return stripIconGlyphs(cleanMarkdown(makeTurndown().turndown(clone.innerHTML)))
 }
 
 // claude.ai renders every conversation turn as a `[data-testid="user-message"]`
@@ -97,34 +181,8 @@ function extractClaudeConversation() {
   const result = turns
     .map((turn) => {
       const isUser = !!turn.querySelector('[data-testid="user-message"]')
-      // Each turn has a hover-reveal action-bar row (timestamp + copy/retry/
-      // etc. buttons) — invisible until hover via `opacity-0 group-hover:
-      // opacity-100`, but still real text as far as innerText is concerned.
-      // Hide it (not clone-and-strip: innerText needs the node attached with
-      // real layout to compute line breaks correctly) just long enough to
-      // read innerText without it, then restore — synchronous, so nothing
-      // ever paints in between.
-      const hoverEls = turn.querySelectorAll('[class*="opacity-0"]')
-      const prevDisplay = Array.from(hoverEls).map((el) => el.style.display)
-      hoverEls.forEach((el) => { el.style.display = 'none' })
-      const rawText = turn.innerText || ''
-      hoverEls.forEach((el, i) => { el.style.display = prevDisplay[i] })
-
-      const paragraphs = rawText
-        .split(/\n{2,}/)
-        .map((p) => p.trim())
-        .filter(Boolean)
-      // The first paragraph is an accessibility-label echo ("You said: …" /
-      // "Claude responded: …") that duplicates a (sometimes truncated)
-      // prefix of the paragraph right after it — drop it when that holds,
-      // keeping only the real message text.
-      if (paragraphs.length > 1) {
-        const label = paragraphs[0].replace(/^(you said|claude responded):\s*/i, '')
-        const echoedPrefix = label.replace(/\.\.\.$/, '').slice(0, 30).toLowerCase()
-        if (echoedPrefix && paragraphs[1].toLowerCase().startsWith(echoedPrefix)) paragraphs.shift()
-      }
-      const text = paragraphs.join('\n\n').trim()
-      return text ? { role: isUser ? 'user' : 'assistant', content: text } : null
+      const content = turnToMarkdown(turn)
+      return content ? { role: isUser ? 'user' : 'assistant', content } : null
     })
     .filter(Boolean)
 
@@ -132,8 +190,7 @@ function extractClaudeConversation() {
 }
 
 // ChatGPT tags every turn directly with `data-message-author-role`, in
-// document order, with no hover-only action-bar noise baked into its
-// innerText — no ancestor-climbing needed like the claude.ai extractor.
+// document order — no ancestor-climbing needed like the claude.ai extractor.
 // Readability instead scores the page as a single "article" and was landing
 // on just the last message block, dropping the rest of the conversation.
 function extractChatGptConversation() {
@@ -143,7 +200,7 @@ function extractChatGptConversation() {
     .map((node) => {
       const role = node.getAttribute('data-message-author-role')
       if (role !== 'user' && role !== 'assistant') return null // skip system/tool turns
-      const content = (node.innerText || '').trim()
+      const content = turnToMarkdown(node)
       return content ? { role, content } : null
     })
     .filter(Boolean)
@@ -155,21 +212,11 @@ function extract() {
     const host = location.hostname
     if (/(^|\.)claude\.ai$/.test(host)) {
       const turns = extractClaudeConversation()
-      if (turns) {
-        return {
-          title: document.title || '',
-          turns: turns.map((t) => ({ role: t.role, content: stripIconGlyphs(t.content) })),
-        }
-      }
+      if (turns) return { title: document.title || '', turns }
     }
     if (/(^|\.)chatgpt\.com$/.test(host) || /(^|\.)chat\.openai\.com$/.test(host)) {
       const turns = extractChatGptConversation()
-      if (turns) {
-        return {
-          title: document.title || '',
-          turns: turns.map((t) => ({ role: t.role, content: stripIconGlyphs(t.content) })),
-        }
-      }
+      if (turns) return { title: document.title || '', turns }
     }
     const clone = document.cloneNode(true)
     const article = new Readability(clone).parse()

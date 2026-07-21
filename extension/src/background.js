@@ -34,8 +34,8 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type !== 'skillmaxx:extracted') return
-  const { title, url, content } = message
-  chrome.storage.local.set({ pendingImport: { title, url, content } }, async () => {
+  const { title, url, content, turns } = message
+  chrome.storage.local.set({ pendingImport: { title, url, content, turns } }, async () => {
     try {
       await deliverToAppTab()
       setBadge('✓', '#2a2')

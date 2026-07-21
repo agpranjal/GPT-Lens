@@ -61,6 +61,9 @@ function stripIconGlyphs(text) {
 // which happens to work for short chats but isn't something to rely on for
 // long, code-heavy ones — walking the actual turn structure instead
 // guarantees every turn makes it into the export.
+// Returns turns as `{ role, content }` (not a flattened string): the app
+// imports each turn as a real message so an imported chat renders — and
+// continues — exactly like one composed natively in Skillmaxx.
 function extractClaudeConversation() {
   const userMsgs = document.querySelectorAll('[data-testid="user-message"]')
   if (userMsgs.length === 0) return null
@@ -91,14 +94,23 @@ function extractClaudeConversation() {
   const turns = Array.from(ancestor.children)
   if (!turns.includes(turnWrapperFor(anchors[0])) || turns.length < userMsgs.length) return null
 
-  const lines = turns
+  const result = turns
     .map((turn) => {
       const isUser = !!turn.querySelector('[data-testid="user-message"]')
-      // innerText needs the node attached with real layout to compute line
-      // breaks correctly, so read it straight off the live turn node — the
-      // per-message toolbar's icon-font glyphs get filtered out later by
-      // stripIconGlyphs instead of by removing those buttons here.
-      const paragraphs = (turn.innerText || '')
+      // Each turn has a hover-reveal action-bar row (timestamp + copy/retry/
+      // etc. buttons) — invisible until hover via `opacity-0 group-hover:
+      // opacity-100`, but still real text as far as innerText is concerned.
+      // Hide it (not clone-and-strip: innerText needs the node attached with
+      // real layout to compute line breaks correctly) just long enough to
+      // read innerText without it, then restore — synchronous, so nothing
+      // ever paints in between.
+      const hoverEls = turn.querySelectorAll('[class*="opacity-0"]')
+      const prevDisplay = Array.from(hoverEls).map((el) => el.style.display)
+      hoverEls.forEach((el) => { el.style.display = 'none' })
+      const rawText = turn.innerText || ''
+      hoverEls.forEach((el, i) => { el.style.display = prevDisplay[i] })
+
+      const paragraphs = rawText
         .split(/\n{2,}/)
         .map((p) => p.trim())
         .filter(Boolean)
@@ -112,18 +124,52 @@ function extractClaudeConversation() {
         if (echoedPrefix && paragraphs[1].toLowerCase().startsWith(echoedPrefix)) paragraphs.shift()
       }
       const text = paragraphs.join('\n\n').trim()
-      return text ? `**${isUser ? 'You' : 'Claude'}:** ${text}` : null
+      return text ? { role: isUser ? 'user' : 'assistant', content: text } : null
     })
     .filter(Boolean)
 
-  return lines.length ? lines.join('\n\n---\n\n') : null
+  return result.length ? result : null
+}
+
+// ChatGPT tags every turn directly with `data-message-author-role`, in
+// document order, with no hover-only action-bar noise baked into its
+// innerText — no ancestor-climbing needed like the claude.ai extractor.
+// Readability instead scores the page as a single "article" and was landing
+// on just the last message block, dropping the rest of the conversation.
+function extractChatGptConversation() {
+  const nodes = document.querySelectorAll('[data-message-author-role]')
+  if (nodes.length === 0) return null
+  const result = Array.from(nodes)
+    .map((node) => {
+      const role = node.getAttribute('data-message-author-role')
+      if (role !== 'user' && role !== 'assistant') return null // skip system/tool turns
+      const content = (node.innerText || '').trim()
+      return content ? { role, content } : null
+    })
+    .filter(Boolean)
+  return result.length ? result : null
 }
 
 function extract() {
   try {
-    if (/(^|\.)claude\.ai$/.test(location.hostname)) {
-      const conversation = extractClaudeConversation()
-      if (conversation) return { title: document.title || '', markdown: stripIconGlyphs(conversation) }
+    const host = location.hostname
+    if (/(^|\.)claude\.ai$/.test(host)) {
+      const turns = extractClaudeConversation()
+      if (turns) {
+        return {
+          title: document.title || '',
+          turns: turns.map((t) => ({ role: t.role, content: stripIconGlyphs(t.content) })),
+        }
+      }
+    }
+    if (/(^|\.)chatgpt\.com$/.test(host) || /(^|\.)chat\.openai\.com$/.test(host)) {
+      const turns = extractChatGptConversation()
+      if (turns) {
+        return {
+          title: document.title || '',
+          turns: turns.map((t) => ({ role: t.role, content: stripIconGlyphs(t.content) })),
+        }
+      }
     }
     const clone = document.cloneNode(true)
     const article = new Readability(clone).parse()
@@ -136,10 +182,24 @@ function extract() {
   }
 }
 
-const { title, markdown } = extract()
+const { title, markdown, turns } = extract()
+// Cap total exported size the same way for both shapes: keep the earliest
+// content and drop whatever falls past the budget, rather than truncating
+// mid-message.
+let cappedTurns
+if (turns) {
+  cappedTurns = []
+  let total = 0
+  for (const t of turns) {
+    if (total + t.content.length > MAX_CHARS) break
+    cappedTurns.push(t)
+    total += t.content.length
+  }
+}
 chrome.runtime.sendMessage({
   type: 'skillmaxx:extracted',
   title,
   url: location.href,
-  content: markdown.slice(0, MAX_CHARS),
+  content: markdown ? markdown.slice(0, MAX_CHARS) : undefined,
+  turns: cappedTurns,
 })

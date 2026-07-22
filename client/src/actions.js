@@ -2,14 +2,12 @@
 // `label` is the short text shown on the button/chip. Used by the selection
 // popup and the modal's variant chips so they never drift.
 export const ACTIONS = [
-  { action: "Nah explain better; with example", label: "Explain better" },
+  { action: "Give a better, simpler explanation (with example)", label: "Explain" },
   { action: "Give Example", label: "Example" },
-  { action: "Go deeper; (with example)", label: "Go deeper" },
+  { action: "Go deeper on this - while keeping explanation simple (with example)", label: "Go Deeper" },
   { action: "Explain step by step", label: "Step by Step" },
   { action: "Explain with code", label: "Code" },
-  { action: "WTF is this", label: "WTF" },
-  { action: "How", label: "How" },
-  { action: "Why", label: "Why" },
+  { action: "WTF is this", label: "What?" }
 ];
 
 // export const ACTIONS = [

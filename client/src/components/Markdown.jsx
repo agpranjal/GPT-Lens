@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 
 // While a text selection overlaps a code block, hide that block's action
 // toolbar. The buttons are absolutely positioned but still live *inside*
@@ -33,6 +34,11 @@ if (typeof document !== "undefined" && !window.__codeblockSelectionGuard) {
 function Pre(props) {
   const preRef = useRef(null);
   const [copied, setCopied] = useState(false);
+
+  // Language label, pulled from the `language-xxx` class rehype-highlight leaves
+  // on the inner <code> (present only for fenced blocks with a declared lang).
+  const codeClass = props.children?.props?.className || "";
+  const lang = (/language-(\w+)/.exec(codeClass) || [])[1] || "";
 
   // Select the whole code block, then let the app's global selection handler
   // (it listens on mouseup) show the same action popup a manual highlight does.
@@ -68,14 +74,13 @@ function Pre(props) {
 
   return (
     <div className="codeblock">
-      {/* The action buttons are rendered BEFORE the code in DOM order on
-          purpose. A triple-click on the last (or only) line anchors the
-          selection at that line's start and extends it to the END of this
-          .codeblock container — so any element sitting AFTER the code gets
-          swept into the range and painted as selected. Placing the buttons
-          ahead of the code keeps them before that anchor point, so a code
-          selection can never reach them. They're positioned back into the
-          top-right corner visually via `position: absolute`. */}
+      {/* Header strip: language on the left, action buttons on the right, code
+          below. Sitting the buttons in a header (ahead of the code in DOM
+          order, and physically outside the scrolling <pre>) means a code
+          selection — even a triple-click that extends to the container edge —
+          can never reach them, so no button ever paints as "selected". */}
+      <div className="codeblock-header">
+      <span className="codeblock-lang">{lang || "code"}</span>
       <div className="codeblock-actions">
       <button
         type="button"
@@ -137,6 +142,7 @@ function Pre(props) {
         )}
       </button>
       </div>
+      </div>
       <div className="codeblock-body">
         <pre ref={preRef} {...props} />
       </div>
@@ -148,7 +154,11 @@ function Pre(props) {
 export default function Markdown({ children }) {
   return (
     <div className="markdown">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={{ pre: Pre }}>
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[[rehypeHighlight, { detect: false, ignoreMissing: true }]]}
+        components={{ pre: Pre }}
+      >
         {children}
       </ReactMarkdown>
     </div>

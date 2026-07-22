@@ -1,12 +1,22 @@
 :root {
-  --bg: #000000;
-  --user-bubble: #2f2f2f;
+  /* Elevation ladder: each surface sits a step lighter than the one behind it,
+     so panels / modals / bubbles read as layered rather than flat. Semantic
+     aliases below point at these so existing rules pick up the change. */
+  --bg: #0d0d0d;             /* base app canvas */
+  --surface: #171717;        /* panels, modal, popup — one step up from base */
+  --surface-raised: #262626; /* bubbles, composer, inputs, chips — top step */
+  --code-bg: #1c1c1c;        /* code blocks; shared by the copy-button mask */
+
   --text: #ececec;
   --muted: #9a9a9a;
-  --border: #2f2f2f;
+  --border: #2e2e2e;         /* just above the surfaces so edges stay visible */
   --accent: #8ab4f8;
-  --composer: #2f2f2f;
-  --modal: #0a0a0a;
+
+  /* semantic aliases (kept so the many rules referencing them still resolve) */
+  --user-bubble: var(--surface-raised);
+  --composer: var(--surface-raised);
+  --modal: var(--surface);
+
   --content-width: 768px;
 }
 
@@ -304,20 +314,27 @@ textarea:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Hug the content: with few actions the popup stays narrow; the cap only
+     kicks in once the buttons would otherwise run too wide (then they wrap). */
+  width: fit-content;
+  max-width: min(92vw, 360px);
 }
 .popup-buttons {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
-  max-width: 340px;
 }
 .popup-buttons button {
+  /* Grow to share each row evenly so a wrapped row never leaves dead space on
+     the right; shrink:0 so labels are never truncated. */
+  flex: 1 0 auto;
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 6px 12px;
   font-size: 13px;
+  white-space: nowrap;
   cursor: pointer;
 }
 .popup-buttons button:hover { border-color: var(--accent); }
@@ -690,51 +707,59 @@ textarea:focus-visible {
   font-size: 0.88em;
 }
 .markdown pre {
-  background: #1a1a1a;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  background: var(--code-bg);
+  border: none;      /* border + radius live on .codeblock so the header clips too */
+  border-radius: 0;
   padding: 14px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   margin: 0;
 }
 .markdown pre code { background: none; padding: 0; font-size: 0.85em; }
+/* rehype-highlight tags highlighted blocks with `.hljs` and the github-dark
+   theme paints its own dark panel behind them — strip that so our --code-bg
+   shows through (keeping the theme's token *colors*). */
+.markdown pre code.hljs { background: transparent; padding: 0; }
 
-/* code block wrapper: hosts the hover copy button */
+/* code block wrapper: border + rounded corners live here so the header strip
+   and the code below are clipped together into one card */
 .codeblock {
-  position: relative;
   margin: 0 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+/* header strip above the code: language label (left), action buttons (right) */
+.codeblock-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 5px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+/* language tag, top-left; stays visible at rest so you can read the block's
+   language without hovering */
+.codeblock-lang {
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
 }
 .codeblock-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
+  margin-left: auto;   /* pin buttons to the right, whatever the label width */
   display: flex;
   align-items: center;
   gap: 6px;
-  z-index: 1;
-  user-select: none;
-  /* This box sits on top of the code's top-right corner even while its
-     buttons are invisible (opacity 0) — without this, clicking/triple-
-     clicking there (e.g. the last line of a short block) hits this wrapper
-     instead of passing through to the code text underneath. Re-enabled on
-     hover so the now-visible buttons stay clickable. */
-  pointer-events: none;
-  /* Long code lines scroll UNDER these pinned buttons (pre is overflow-x:auto).
-     When such a line is selected, the browser paints the selection highlight
-     on that text — and it would bleed up through the translucent buttons,
-     making the controls LOOK selected. An opaque background matching the code
-     block (.markdown pre) masks the highlight so nothing shows through the
-     button faces or the gap between them. Keep this color in sync with
-     `.markdown pre`. */
-  background: #1a1a1a;
-  border-radius: 6px;
 }
-.codeblock:hover .codeblock-actions { pointer-events: auto; }
 /* Set by the selection guard in Markdown.jsx while a text selection overlaps
-   this block: drop the toolbar entirely so its buttons can never be painted as
-   part of the selection (a non-rendered control cannot be highlighted). */
-.codeblock.selecting .codeblock-actions { display: none; }
+   this block (e.g. dragging from the text above straight through the header):
+   hide the header's contents so the label/buttons can't paint as "selected".
+   `visibility` (not `display`) keeps the strip's height, so the code never
+   jumps mid-selection. */
+.codeblock.selecting .codeblock-header > * { visibility: hidden; }
 .codeblock-copy,
 .codeblock-select {
   display: flex;

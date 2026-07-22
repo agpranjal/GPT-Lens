@@ -1,0 +1,11 @@
+<!-- Source shape for the toolbar PNGs (see genicons.js). Material "flash" bolt,
+     vertical orange gradient, transparent background. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd54a"/>
+      <stop offset="1" stop-color="#ff7a00"/>
+    </linearGradient>
+  </defs>
+  <path d="M7 2v11h3v9l7-12h-4l4-8z" fill="url(#g)"/>
+</svg>

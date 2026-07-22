@@ -136,12 +136,20 @@ function turnToMarkdown(turnEl) {
   // than show that; this app doesn't process artifacts/canvas at all.
   clone.querySelectorAll('[class*="artifact-block"]').forEach((el) => el.remove())
   clone.querySelectorAll('button.behavior-btn').forEach((el) => el.closest('p, li, div')?.remove())
-  // claude.ai's collapsible status line — "Thinking about …" (extended
-  // thinking summary) or "Presented file" (tool-use recap) — is a live
-  // `aria-expanded` toggle button (class `group/status`), not part of the
-  // reply text. Reading it as a plain line ("Thinking about generating basic
-  // Python hello world syntax") makes it look like Claude said that out loud.
-  // Drop it; the actual reply content follows separately either way.
+  // claude.ai's collapsible status pill — the "Thinking about …" / "Untangling
+  // …" extended-thinking summary, or a "Presented file" tool-use recap — is a
+  // live `aria-expanded` toggle (class `group/status`) sitting in its own pill
+  // wrapper (whose class uses the `--msg-pill-py` CSS var), separate from the
+  // actual reply. Collapsed, the pill is just the toggle button; but if the
+  // user expanded it before importing, the full reasoning/tool body is a
+  // sibling of the button *inside that same pill*, so removing only the button
+  // would leak the entire chain-of-thought into the chat as plain prose.
+  // Remove the whole pill — but only pills that actually contain a status
+  // toggle, never ordinary message content — then drop any stray toggle that
+  // wasn't wrapped in a recognizable pill.
+  clone.querySelectorAll('[class*="msg-pill-py"]').forEach((pill) => {
+    if (pill.querySelector('[class*="group/status"]')) pill.remove()
+  })
   clone.querySelectorAll('[class*="group/status"]').forEach((el) => el.remove())
   // Math (KaTeX, used by both sites): what's actually visible on the page is
   // dozens of tiny per-glyph spans with no real word boundaries — reading

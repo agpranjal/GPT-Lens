@@ -129,6 +129,20 @@ function turnToMarkdown(turnEl) {
   // broken image icon. Drop the image rather than show that; the caption or
   // surrounding text (if any) still comes through fine on its own.
   clone.querySelectorAll('img').forEach((el) => el.remove())
+  // Artifacts (claude.ai) and canvas files (chatgpt.com): these render as a
+  // reference card/chip pointing at a side panel this app has no way to open
+  // or fetch the content of. Showing the card's flattened text ("Hello world
+  // PY Download") reads as broken UI, not a file. Drop the whole thing rather
+  // than show that; this app doesn't process artifacts/canvas at all.
+  clone.querySelectorAll('[class*="artifact-block"]').forEach((el) => el.remove())
+  clone.querySelectorAll('button.behavior-btn').forEach((el) => el.closest('p, li, div')?.remove())
+  // claude.ai's collapsible status line — "Thinking about …" (extended
+  // thinking summary) or "Presented file" (tool-use recap) — is a live
+  // `aria-expanded` toggle button (class `group/status`), not part of the
+  // reply text. Reading it as a plain line ("Thinking about generating basic
+  // Python hello world syntax") makes it look like Claude said that out loud.
+  // Drop it; the actual reply content follows separately either way.
+  clone.querySelectorAll('[class*="group/status"]').forEach((el) => el.remove())
   // Math (KaTeX, used by both sites): what's actually visible on the page is
   // dozens of tiny per-glyph spans with no real word boundaries — reading
   // that as text produces unreadable symbol soup, not a formula. The clean

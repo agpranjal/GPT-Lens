@@ -80,7 +80,10 @@ function Pre(props) {
           selection — even a triple-click that extends to the container edge —
           can never reach them, so no button ever paints as "selected". */}
       <div className="codeblock-header">
-      <span className="codeblock-lang">{lang || "code"}</span>
+      {/* Rendered via CSS `content` (see .codeblock-lang::before) rather than as
+          a text node, so a selection dragged across the block can never
+          highlight or copy the language label. */}
+      <span className="codeblock-lang" data-lang={lang || "code"} aria-hidden="true" />
       <div className="codeblock-actions">
       <button
         type="button"

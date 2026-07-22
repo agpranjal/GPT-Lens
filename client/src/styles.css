@@ -751,6 +751,9 @@ textarea:focus-visible {
   text-transform: lowercase;
   letter-spacing: 0.02em;
 }
+/* The label text is generated content — not a selectable/copyable text node —
+   so dragging a selection across the code block never highlights it. */
+.codeblock-lang::before { content: attr(data-lang); }
 .codeblock-actions {
   margin-left: auto;   /* pin buttons to the right, whatever the label width */
   display: flex;

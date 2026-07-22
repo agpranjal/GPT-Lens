@@ -707,10 +707,10 @@ textarea:focus-visible {
   font-size: 0.88em;
 }
 .markdown pre {
-  background: var(--code-bg);
-  border: none;      /* border + radius live on .codeblock so the header clips too */
+  background: transparent;   /* the surface is owned by .codeblock now */
+  border: none;              /* border + radius live on .codeblock */
   border-radius: 0;
-  padding: 14px;
+  padding: 8px 14px 14px;    /* less top padding — the header row sits above */
   overflow-x: auto;
   overscroll-behavior-x: contain;
   margin: 0;
@@ -721,22 +721,25 @@ textarea:focus-visible {
    shows through (keeping the theme's token *colors*). */
 .markdown pre code.hljs { background: transparent; padding: 0; }
 
-/* code block wrapper: border + rounded corners live here so the header strip
-   and the code below are clipped together into one card */
+/* code block wrapper: one continuous surface — the language label and the code
+   share the same background, no boxed header, no divider (matches Claude) */
 .codeblock {
-  margin: 0 0 12px;
+  /* top margin gives breathing room between the preceding text and the block;
+     it collapses with a preceding paragraph's margin in normal flow, but adds
+     the gap back inside list items (where `li > p` margins are zeroed) */
+  margin: 14px 0 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   overflow: hidden;
+  background: var(--code-bg);
 }
-/* header strip above the code: language label (left), action buttons (right) */
+/* top row: language label (left), action buttons (right). Transparent so it
+   reads as part of the code surface rather than a separate section. */
 .codeblock-header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 10px 5px 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid var(--border);
+  padding: 10px 10px 0 14px; /* left aligns with the <pre> padding below */
   user-select: none;
 }
 /* language tag, top-left; stays visible at rest so you can read the block's

@@ -331,11 +331,99 @@ function extractClaudeConversationStatic() {
   return result.length ? result : null
 }
 
-// ChatGPT tags every turn directly with `data-message-author-role`, in
-// document order — no ancestor-climbing needed like the claude.ai extractor.
-// Readability instead scores the page as a single "article" and was landing
-// on just the last message block, dropping the rest of the conversation.
-function extractChatGptConversation() {
+// ChatGPT virtualizes long threads: off-screen turns collapse into
+// `--last-known-height` placeholder spacers, and only a window of turns near
+// the viewport stays mounted with `data-message-author-role`. Scraping the DOM
+// would export just that window (e.g. the last ~7 turns of a 34-turn chat) and
+// silently drop the rest. Unlike claude.ai's list, ChatGPT's virtualizer
+// ignores *programmatic* scrolling entirely — only real, trusted wheel events
+// rehydrate turns — so a content script (synthetic scroll only) can't page the
+// rest into the DOM the way the claude.ai extractor does.
+//
+// Instead, pull the whole conversation straight from ChatGPT's own backend —
+// the same endpoint its frontend loads from, complete regardless of what's
+// mounted — and fall back to scraping the mounted DOM only if that fails.
+async function extractChatGptConversation() {
+  const fromApi = await extractChatGptConversationFromApi()
+  if (fromApi && fromApi.length) return fromApi
+  return extractChatGptConversationFromDom()
+}
+
+// Fetches the full conversation as JSON from ChatGPT's backend. Runs in the
+// page's own origin with the user's session, so it's a same-origin authorized
+// request — the access token comes from the session endpoint the frontend
+// itself uses. Returns `{ role, content }[]` on the active branch, or null on
+// any failure (temporary chat, token/endpoint change, parse error) so the
+// caller falls back to the DOM.
+async function extractChatGptConversationFromApi() {
+  try {
+    const convId = (location.pathname.match(/\/c\/([^/?#]+)/) || [])[1]
+    if (!convId) return null
+    const session = await fetch('/api/auth/session', { credentials: 'include' }).then((r) =>
+      r.ok ? r.json() : null
+    )
+    const token = session?.accessToken
+    if (!token) return null
+    const res = await fetch('/backend-api/conversation/' + convId, {
+      credentials: 'include',
+      headers: { Authorization: 'Bearer ' + token },
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    const mapping = data.mapping || {}
+    // The mapping is a tree (edits/regenerations branch it); walk the *active*
+    // branch only, from the current leaf up to the root, so abandoned branches
+    // don't leak in. The guard set defends against a malformed parent cycle.
+    const chain = []
+    const seen = new Set()
+    let cur = data.current_node
+    while (cur && !seen.has(cur)) {
+      seen.add(cur)
+      const node = mapping[cur]
+      if (!node) break
+      if (node.message) chain.push(node.message)
+      cur = node.parent
+    }
+    chain.reverse()
+    const turns = []
+    for (const m of chain) {
+      const role = m.author?.role
+      if (role !== 'user' && role !== 'assistant') continue // skip system/tool
+      // Only plain text messages: this drops reasoning ("thoughts"), the
+      // "Worked for Ns" recap ("reasoning_recap"), tool code, execution output,
+      // and image parts — the same things we don't render from the DOM.
+      if (m.content?.content_type !== 'text') continue
+      if (m.recipient && m.recipient !== 'all') continue // skip tool-directed calls
+      // A reasoning model also emits plain-text planning interjections ("I'll
+      // reduce the equation to…") on the "commentary" channel — shown inside
+      // the page's thinking block, not the answer bubble. The real answer is on
+      // the "final" channel; user turns carry no channel. Keep those two, drop
+      // commentary/analysis so chain-of-thought never lands in the chat.
+      if (m.channel && m.channel !== 'final') continue
+      const text = (m.content.parts || [])
+        .filter((p) => typeof p === 'string')
+        .join('\n\n')
+        .trim()
+      if (!text) continue
+      // An answer occasionally arrives as several consecutive text nodes; merge
+      // same-role runs so each turn is one message/bubble.
+      if (turns.length && turns[turns.length - 1].role === role) {
+        turns[turns.length - 1].content += '\n\n' + text
+      } else {
+        turns.push({ role, content: text })
+      }
+    }
+    return turns.length ? turns : null
+  } catch {
+    return null
+  }
+}
+
+// DOM fallback: ChatGPT tags every mounted turn with `data-message-author-role`
+// in document order. Only reaches turns currently in the DOM, so on a long
+// (virtualized) thread it's incomplete — but it's a safety net for when the
+// backend fetch fails, and it's complete for short, fully-mounted chats.
+function extractChatGptConversationFromDom() {
   const nodes = document.querySelectorAll('[data-message-author-role]')
   if (nodes.length === 0) return null
   const result = Array.from(nodes)
@@ -357,7 +445,7 @@ async function extract() {
       if (turns) return { title: document.title || '', turns }
     }
     if (/(^|\.)chatgpt\.com$/.test(host) || /(^|\.)chat\.openai\.com$/.test(host)) {
-      const turns = extractChatGptConversation()
+      const turns = await extractChatGptConversation()
       if (turns) return { title: document.title || '', turns }
     }
     const clone = document.cloneNode(true)

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Markdown from "./Markdown.jsx";
 import Dots from "./Dots.jsx";
 
@@ -29,19 +29,72 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   const followUpInputRef = useRef(null);
   const dockRef = useRef(null);
   const bodyRef = useRef(null);
+  const tabsRef = useRef(null);
   const activeCrumbRef = useRef(null);
   const scrollPositions = useRef({}); // frame.id -> last scrollTop in .modal-body
+  const settlingRef = useRef(false); // true while a tab switch is settling
 
-  // The body element is shared by every breadcrumb, so restore the frame's own
-  // scroll position when navigating; positions are saved in onScroll below.
-  useLayoutEffect(() => {
+  // Record where the current tab is parked, right now. Called synchronously
+  // before any navigation this component starts, because the scroll event is
+  // not a reliable moment to save: scroll events are coalesced to one per
+  // frame, so scrolling and then clicking a tab in the same frame delivers the
+  // event AFTER the switch has rendered — filing the old tab's offset under
+  // the new tab's id, which then reads as "this tab drifted" on the next visit.
+  const rememberScroll = useCallback(() => {
     const el = bodyRef.current;
-    if (el) el.scrollTop = scrollPositions.current[frame.id] ?? 0;
+    if (el) scrollPositions.current[frame.id] = el.scrollTop;
   }, [frame.id]);
 
-  // Keep the active breadcrumb in view when the tab row overflows.
+  // Switch tabs, saving the outgoing tab's position on the way out.
+  const goTo = useCallback(
+    (i) => {
+      if (i === index) return;
+      rememberScroll();
+      onNavigate(i);
+    },
+    [index, rememberScroll, onNavigate]
+  );
+
+  // Each tab mounts its own body element (see the key below), so arriving at
+  // one means arriving at a fresh scroller sitting at the top — put it back
+  // where this tab was left. The assignment fires a scroll event of its own,
+  // which lands after this commit, so scroll events are ignored until the
+  // switch has settled rather than being allowed to overwrite what was just
+  // restored.
   useLayoutEffect(() => {
-    activeCrumbRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const el = bodyRef.current;
+    if (!el) return;
+    settlingRef.current = true;
+    el.scrollTop = scrollPositions.current[frame.id] ?? 0;
+    // Two frames: scroll events are dispatched just before requestAnimationFrame
+    // callbacks, so one frame can still be mid-flight when the first fires.
+    let inner;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        settlingRef.current = false;
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      if (inner) cancelAnimationFrame(inner);
+      settlingRef.current = false;
+    };
+  }, [frame.id]);
+
+  // Keep the active tab in view when the strip overflows. Scrolled by hand
+  // rather than with scrollIntoView, which nudges EVERY scrollable ancestor:
+  // .modal-tabs scrolls in the block axis too (declaring overflow-x computes
+  // overflow-y to auto), and .modal is overflow:hidden — still programmatically
+  // scrollable, and a pixel of sub-pixel rounding there is enough to shift the
+  // whole modal a little on every single tab switch.
+  useLayoutEffect(() => {
+    const tab = activeCrumbRef.current;
+    const strip = tabsRef.current;
+    if (!tab || !strip) return;
+    const t = tab.getBoundingClientRect();
+    const s = strip.getBoundingClientRect();
+    if (t.left < s.left) strip.scrollLeft -= s.left - t.left;
+    else if (t.right > s.right) strip.scrollLeft += t.right - s.right;
   }, [index]);
 
   function closeFollowUp() {
@@ -98,12 +151,12 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
         setFollowUpOpen(true);
         return;
       }
-      if (e.key === "ArrowLeft" && index > 0) onNavigate(index - 1);
-      else if (e.key === "ArrowRight" && index < frames.length - 1) onNavigate(index + 1);
+      if (e.key === "ArrowLeft" && index > 0) goTo(index - 1);
+      else if (e.key === "ArrowRight" && index < frames.length - 1) goTo(index + 1);
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [onClose, onNavigate, onCloseFrame, index, frames.length, followUpOpen]);
+  }, [onClose, goTo, onCloseFrame, index, frames.length, followUpOpen]);
 
   function submitFollowUp(e) {
     e.preventDefault();
@@ -120,6 +173,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   function askFollowUpAsNewTab() {
     const text = followUp.trim();
     if (!text || anyStreaming) return;
+    rememberScroll(); // this tab is about to be left for the new one
     onVariant({ custom: text, label: text });
     setFollowUp("");
     closeFollowUp();
@@ -139,13 +193,13 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
         }}
       >
         <header className="modal-header">
-          <nav className="modal-tabs" role="tablist">
+          <nav className="modal-tabs" role="tablist" ref={tabsRef}>
             {frames.map((f, i) => (
               <div
                 key={f.id}
                 className={`modal-tab${i === index ? " active" : ""}`}
                 ref={i === index ? activeCrumbRef : null}
-                onClick={() => onNavigate(i)}
+                onClick={() => goTo(i)}
                 title={f.selectedText}
                 role="tab"
                 aria-selected={i === index}
@@ -205,11 +259,23 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
             <blockquote className="modal-snippet">{frame.selectedText}</blockquote>
           </div>
 
+          {/* Keyed by frame, so every tab gets its OWN scroll container rather
+              than swapping content through a shared one. A scroller carries
+              live state the next tab has no business inheriting: an in-flight
+              momentum fling from a trackpad (compositor-driven — assigning
+              scrollTop does not cancel it), the browser's scroll anchoring
+              adjustment, and the offset clamp applied when taller content is
+              replaced by shorter. All of those land after the switch and nudge
+              the arriving tab by a small amount. Mounting a fresh element
+              leaves them attached to the outgoing node, which is by then
+              detached and harmless. */}
           <div
+            key={frame.id}
             className="modal-body"
             data-modal-body
             ref={bodyRef}
             onScroll={(e) => {
+              if (settlingRef.current) return; // echo of the switch, not the reader
               scrollPositions.current[frame.id] = e.currentTarget.scrollTop;
             }}
           >

@@ -628,6 +628,10 @@ textarea:focus-visible {
   padding: 18px 22px 24px;
   overflow-y: auto;
   overscroll-behavior: contain; /* don't chain scrolls to the page behind */
+  /* Never let the browser silently re-aim the scroll offset to keep some
+     "anchor" element steady when the content above it changes size — a reply
+     streaming in would otherwise shift the position the reader chose. */
+  overflow-anchor: none;
   min-height: 0;
   flex: 1;
   scrollbar-width: none; /* Firefox */

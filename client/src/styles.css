@@ -156,7 +156,54 @@ textarea:focus-visible {
   padding: 28px 20px;
 }
 
-.empty { color: var(--muted); margin: auto; text-align: center; }
+/* ---- empty state ----
+   Doubles as the app's only onboarding: it names the drill-down mechanic and
+   offers starters, since a blank chat window can't teach what makes this
+   different from any other chat box. */
+.empty {
+  color: var(--muted);
+  margin: auto;
+  text-align: center;
+  max-width: 560px;
+  padding: 0 20px;
+}
+.empty-title {
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.empty-sub { margin: 0 0 24px; font-size: 14px; line-height: 1.6; }
+.empty-sub strong { color: var(--text); font-weight: 600; }
+.empty-starters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.empty-starter {
+  background: var(--surface-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 11px 14px;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+.empty-starter:hover { border-color: var(--accent); background: #2e2e2e; }
+.empty-hint { margin: 0; font-size: 12px; opacity: 0.75; }
+.empty-hint kbd {
+  font: inherit;
+  font-size: 11px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 1px 5px;
+  margin: 0 1px;
+}
 
 /* blinking caret riding the tail of the streaming reply */
 .message.assistant.streaming .markdown > *:last-child::after {
@@ -416,6 +463,26 @@ textarea:focus-visible {
   gap: 8px;
   flex-shrink: 0;
 }
+/* only mounted while a stream is running, so it can't be mistaken for a
+   permanent control — it takes the place of the composer's stop button,
+   which the modal has no equivalent of. */
+.modal-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.12s, border-color 0.12s;
+}
+.modal-stop:hover { color: var(--text); border-color: var(--accent); }
 /* breadcrumb trail rendered as browser-style tabs */
 .modal-tabs {
   display: flex;

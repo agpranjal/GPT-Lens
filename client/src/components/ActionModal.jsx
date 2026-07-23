@@ -14,7 +14,7 @@ function shorten(text, n = 28) {
 // - Follow-up box (bottom) = continue chatting about the CURRENT lens (plain
 //   Enter), or ask it as a fresh lens in a new tab (Cmd/Ctrl+Enter). The
 //   thread is stored on the variant itself, so it persists across tab switches.
-export default function ActionModal({ modal, onClose, onNavigate, onVariant, onAskFollowUp, onCloseFrame }) {
+export default function ActionModal({ modal, onClose, onNavigate, onVariant, onAskFollowUp, onCloseFrame, onStopStream }) {
   const { frames, index } = modal;
   const frame = frames[index];
   const current = frame.variants[frame.activeKey];
@@ -168,6 +168,21 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
             ))}
           </nav>
           <div className="modal-actions">
+            {/* Cut the answer short without closing the tab — whatever has
+                streamed in so far stays on screen and stays drillable. */}
+            {anyStreaming && (
+              <button
+                className="modal-stop"
+                onClick={onStopStream}
+                title="Stop generating (esc closes)"
+                aria-label="Stop generating"
+              >
+                <svg width="11" height="11" viewBox="0 0 14 14" aria-hidden="true">
+                  <rect x="2" y="2" width="10" height="10" rx="2" fill="currentColor" />
+                </svg>
+                Stop
+              </button>
+            )}
             <button
               className="modal-maximize"
               onClick={(e) => {

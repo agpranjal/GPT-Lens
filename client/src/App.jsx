@@ -875,6 +875,11 @@ export default function App() {
     setActiveId(null);
   }, []);
 
+  // Cut a running action/follow-up stream short, keeping whatever arrived.
+  // The abort handlers in streamIntoVariant / the follow-up stream already
+  // mark the variant "done", so the partial answer stays readable.
+  const handleStopAction = useCallback(() => actionAbortRef.current?.abort(), []);
+
   const handleOpenSession = useCallback((id) => setActiveId(id), []);
 
   const handleDeleteSession = useCallback((id) => {
@@ -951,6 +956,7 @@ export default function App() {
         <ActionModal
           modal={activeSession}
           onClose={handleCloseModal}
+          onStopStream={handleStopAction}
           onNavigate={handleNavigate}
           onVariant={handleVariant}
           onAskFollowUp={handleAskFollowUp}

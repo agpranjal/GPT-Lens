@@ -1,5 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Message from "./Message.jsx";
+
+// Starters for the empty state. They double as a demo of what the app is for:
+// ask something meaty, then highlight any part of the answer to drill in.
+const STARTERS = [
+  "Explain how HTTPS actually works, end to end",
+  "What is a database index, and when does it hurt?",
+  "Walk me through how React decides to re-render",
+  "Explain event loops like I've never seen one",
+];
 
 export default function ChatView({ messages, loading, onSend, onStop, focusToken }) {
   const [input, setInput] = useState("");
@@ -7,16 +16,29 @@ export default function ChatView({ messages, loading, onSend, onStop, focusToken
   const endRef = useRef(null);
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  // Whether the view should keep following new content. True while the reader
+  // is parked at (or near) the bottom; flipped off the moment they scroll up
+  // to re-read something, so a streaming reply never yanks the page away.
+  const stickRef = useRef(true);
 
-  // Show a "jump to bottom" pill once the reader scrolls up past a threshold.
-  function onScroll() {
+  function distanceFromBottom() {
     const el = listRef.current;
-    if (!el) return;
-    setAwayFromBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 150);
+    return el ? el.scrollHeight - el.scrollTop - el.clientHeight : 0;
   }
 
-  const scrollToBottom = () =>
+  // Scrolling up past a small threshold disengages follow; coming back within
+  // it re-engages. The "jump to bottom" pill uses a larger threshold so it
+  // doesn't flash on tiny scrolls.
+  function onScroll() {
+    const d = distanceFromBottom();
+    stickRef.current = d < 40;
+    setAwayFromBottom(d > 150);
+  }
+
+  function scrollToBottom() {
+    stickRef.current = true;
     endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }
 
   // Focus the message box on mount and whenever the app requests it
   // (opening a chat, starting a new one, pressing "/").
@@ -39,15 +61,24 @@ export default function ChatView({ messages, loading, onSend, onStop, focusToken
     return () => window.removeEventListener("resize", resize);
   }, [input]);
 
-  // Scroll to the bottom only when a new message is added (e.g. you send one),
-  // not on every streamed chunk — so the view stays put while a reply streams in.
+  // Follow the stream chunk by chunk, but only while stuck to the bottom.
+  // Jumping straight to scrollHeight (rather than a smooth scroll) keeps the
+  // text steady as it grows instead of chasing it with an easing animation.
+  // Also re-derives the pill from the DOM: switching chats replaces the list
+  // without firing a scroll event, so stale state would leave it visible.
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    if (stickRef.current) el.scrollTop = el.scrollHeight;
+    setAwayFromBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 150);
+  }, [messages]);
+
+  // A whole new message (you sent one, a reply began, a chat was opened)
+  // re-engages follow even if the reader had scrolled away from the previous one.
   useEffect(() => {
+    stickRef.current = true;
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
-
-  // Recompute the pill from the DOM when the list changes — switching chats
-  // doesn't fire a scroll event, so stale state would leave it visible.
-  useEffect(onScroll, [messages]);
 
   function submit(e) {
     e.preventDefault();
@@ -62,7 +93,28 @@ export default function ChatView({ messages, loading, onSend, onStop, focusToken
     <div className="chat-view">
       <div className="messages" ref={listRef} onScroll={onScroll}>
         {messages.length === 0 && (
-          <div className="empty">Hey !</div>
+          <div className="empty">
+            <h2 className="empty-title">What do you want to understand?</h2>
+            <p className="empty-sub">
+              Ask anything, then <strong>highlight any part of the answer</strong> to
+              explain it, get an example, or go deeper — without losing your place.
+            </p>
+            <div className="empty-starters">
+              {STARTERS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className="empty-starter"
+                  onClick={() => onSend(s)}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            <p className="empty-hint">
+              <kbd>/</kbd> jump to the message box · <kbd>⌘⇧O</kbd> new chat
+            </p>
+          </div>
         )}
         {messages.map((m, i) => (
           <Message

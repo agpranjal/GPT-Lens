@@ -95,6 +95,27 @@ const clipRectToEl = (r, clipEl) => {
 const clipRectsToEl = (rects, clipEl) =>
   rects.map((r) => clipRectToEl(r, clipEl)).filter(Boolean);
 
+// Drop selection client-rects that land on a code-block header row. A
+// triple-click on the heading above a block selects that paragraph, and the
+// browser's client rects for the range extend a full-width rectangle down over
+// the next block's leading line box — i.e. the header. The header holds no real
+// selected text (its label is generated content), so mirroring that rect just
+// paints a stray band across the label; drop any rect overlapping a header.
+const dropHeaderRects = (rects) => {
+  const headers = Array.from(
+    document.querySelectorAll(".codeblock-header")
+  ).map((el) => el.getBoundingClientRect());
+  if (!headers.length) return rects;
+  return rects.filter(
+    (r) =>
+      !headers.some(
+        (h) =>
+          Math.min(r.right, h.right) > Math.max(r.left, h.left) &&
+          Math.min(r.bottom, h.bottom) > Math.max(r.top, h.top)
+      )
+  );
+};
+
 export default function App() {
   const [messages, setMessages] = useState([]); // { id, role, content }
   const [chatLoading, setChatLoading] = useState(false);
@@ -239,7 +260,9 @@ export default function App() {
       const rawRect = range.getBoundingClientRect();
       // Per-line rects for our own highlight overlay — the native highlight
       // stops being painted once focus moves into the popup's input.
-      const rawHighlightRects = Array.from(range.getClientRects());
+      const rawHighlightRects = dropHeaderRects(
+        Array.from(range.getClientRects())
+      );
 
       // Inside the modal: source is the explanation currently shown (drill-down).
       const modalBody = anchorEl?.closest?.("[data-modal-body]");

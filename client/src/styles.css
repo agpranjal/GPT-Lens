@@ -760,12 +760,17 @@ textarea:focus-visible {
   align-items: center;
   gap: 6px;
 }
-/* Set by the selection guard in Markdown.jsx while a text selection overlaps
-   this block (e.g. dragging from the text above straight through the header):
-   hide the header's contents so the label/buttons can't paint as "selected".
-   `visibility` (not `display`) keeps the strip's height, so the code never
-   jumps mid-selection. */
-.codeblock.selecting .codeblock-header > * { visibility: hidden; }
+/* A triple-click on the heading above a block selects that paragraph, and the
+   browser paints the selection rectangle down across this header's line box —
+   even though the range logically ends before the block (so a JS
+   intersects-node guard never sees it). Painting a transparent ::selection
+   here makes that stray band invisible without touching real code selection
+   below. The header has no selectable text of its own (the label is generated
+   content, the buttons are user-select:none), so this has no downside. */
+.codeblock-header::selection,
+.codeblock-header *::selection { background: transparent; }
+.codeblock-header::-moz-selection,
+.codeblock-header *::-moz-selection { background: transparent; }
 .codeblock-copy,
 .codeblock-select {
   display: flex;

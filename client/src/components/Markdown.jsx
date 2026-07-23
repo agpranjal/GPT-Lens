@@ -3,32 +3,13 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 
-// While a text selection overlaps a code block, hide that block's action
-// toolbar. The buttons are absolutely positioned but still live *inside*
-// .codeblock, so a selection entering the block from either side — the heading
-// line above it, or a triple-click on the last/only line that extends to the
-// block boundary — sweeps them into the range, and some browsers (Chrome on
-// macOS) then paint the buttons as "selected". DOM order can't win: whichever
-// edge the buttons sit at, a selection from that side reaches them. A control
-// that isn't rendered can't be highlighted, and you're never clicking copy
-// mid-selection — so we drop the toolbar for the duration of the overlap.
-// Installed once for the whole document. The work is light (browsers already
-// throttle selectionchange to ~frame rate) and runs synchronously so it holds
-// even when requestAnimationFrame is paused (e.g. a backgrounded tab).
-if (typeof document !== "undefined" && !window.__codeblockSelectionGuard) {
-  window.__codeblockSelectionGuard = true;
-  document.addEventListener("selectionchange", () => {
-    const sel = window.getSelection();
-    const range =
-      sel && sel.rangeCount > 0 && !sel.isCollapsed ? sel.getRangeAt(0) : null;
-    document.querySelectorAll(".codeblock").forEach((cb) => {
-      cb.classList.toggle(
-        "selecting",
-        range ? range.intersectsNode(cb) : false
-      );
-    });
-  });
-}
+// The code-block header (language label + copy/select buttons) can't be caught
+// in a text selection: the label is rendered as CSS generated content and the
+// buttons are user-select:none, so neither becomes selectable text. The one
+// remaining artifact — the app's own highlight overlay drawing a mirror rect
+// across the header row when a triple-click on the heading above extends into
+// the block — is filtered out where the overlay is built (see dropHeaderRects
+// in App.jsx).
 
 // Code block with hover buttons (top-right corner): "select" and "copy".
 function Pre(props) {

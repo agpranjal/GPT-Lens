@@ -620,7 +620,9 @@ export default function App() {
                 { ...frame, parentId },
                 ...s.frames.slice(insertAt),
               ],
-              index: insertAt,
+              // Stay on the current tab — the new one streams in the
+              // background and the user switches to it manually once ready.
+              index: s.index,
             };
           })
         );
@@ -696,7 +698,9 @@ export default function App() {
                   newFrame,
                   ...x.frames.slice(insertAt),
                 ],
-                index: insertAt,
+                // Stay on the current tab — the new one streams in the
+                // background and the user switches to it manually once ready.
+                index: x.index,
               }
         )
       );

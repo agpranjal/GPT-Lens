@@ -1,14 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Message from "./Message.jsx";
-
-// Starters for the empty state. They double as a demo of what the app is for:
-// ask something meaty, then highlight any part of the answer to drill in.
-const STARTERS = [
-  "Explain how HTTPS actually works, end to end",
-  "What is a database index, and when does it hurt?",
-  "Walk me through how React decides to re-render",
-  "Explain event loops like I've never seen one",
-];
+import Welcome from "./Welcome.jsx";
 
 export default function ChatView({ messages, loading, onSend, onStop, focusToken }) {
   const [input, setInput] = useState("");
@@ -69,7 +61,9 @@ export default function ChatView({ messages, loading, onSend, onStop, focusToken
   useLayoutEffect(() => {
     const el = listRef.current;
     if (!el) return;
-    if (stickRef.current) el.scrollTop = el.scrollHeight;
+    // Nothing to follow in an empty chat, and the welcome screen can be taller
+    // than the window — pinning that to the bottom would hide its top.
+    if (stickRef.current && messages.length) el.scrollTop = el.scrollHeight;
     setAwayFromBottom(el.scrollHeight - el.scrollTop - el.clientHeight > 150);
   }, [messages]);
 
@@ -77,7 +71,7 @@ export default function ChatView({ messages, loading, onSend, onStop, focusToken
   // re-engages follow even if the reader had scrolled away from the previous one.
   useEffect(() => {
     stickRef.current = true;
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messages.length) endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
   function submit(e) {
@@ -91,31 +85,12 @@ export default function ChatView({ messages, loading, onSend, onStop, focusToken
 
   return (
     <div className="chat-view">
-      <div className="messages" ref={listRef} onScroll={onScroll}>
-        {messages.length === 0 && (
-          <div className="empty">
-            <h2 className="empty-title">What do you want to understand?</h2>
-            <p className="empty-sub">
-              Ask anything, then <strong>highlight any part of the answer</strong> to
-              explain it, get an example, or go deeper — without losing your place.
-            </p>
-            <div className="empty-starters">
-              {STARTERS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  className="empty-starter"
-                  onClick={() => onSend(s)}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
-            <p className="empty-hint">
-              <kbd>/</kbd> jump to the message box · <kbd>⌘⇧O</kbd> new chat
-            </p>
-          </div>
-        )}
+      <div
+        className={`messages${messages.length === 0 ? " is-empty" : ""}`}
+        ref={listRef}
+        onScroll={onScroll}
+      >
+        {messages.length === 0 && <Welcome onSend={onSend} />}
         {messages.map((m, i) => (
           <Message
             key={m.id}

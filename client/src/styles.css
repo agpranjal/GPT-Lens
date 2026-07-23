@@ -156,53 +156,186 @@ textarea:focus-visible {
   padding: 28px 20px;
 }
 
-/* ---- empty state ----
-   Doubles as the app's only onboarding: it names the drill-down mechanic and
-   offers starters, since a blank chat window can't teach what makes this
-   different from any other chat box. */
-.empty {
+/* ---- welcome / empty state ----
+   The app's only onboarding. A blank chat box can't convey what makes this
+   different, so the screen demonstrates the drill-down mechanic instead of
+   describing it: a mock answer with a phrase highlighted and the action popup
+   floating above, played once on mount. */
+/* Centred via the container, not `margin: auto` on the item: a flex item
+   centred with auto margins has its overflow pushed past the scroll container's
+   top edge, unreachable, so on a short window the mark and title get cut off.
+   `safe` drops the centring rather than clipping once it no longer fits — and
+   in a browser that doesn't know the keyword the declaration is ignored, which
+   leaves the content top-aligned and still fully reachable. */
+.messages.is-empty { justify-content: safe center; padding-block: 16px; }
+.welcome {
   color: var(--muted);
-  margin: auto;
   text-align: center;
+  width: 100%;
   max-width: 560px;
+  margin: 0 auto;
   padding: 0 20px;
 }
-.empty-title {
-  color: var(--text);
-  font-size: 24px;
-  font-weight: 600;
-  margin: 0 0 10px;
+
+/* brand mark, lit with the bolt's own warm colour rather than the UI accent */
+.welcome-mark {
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  box-shadow: 0 0 0 5px rgba(255, 170, 40, 0.045), 0 10px 28px rgba(255, 140, 0, 0.1);
 }
-.empty-sub { margin: 0 0 24px; font-size: 14px; line-height: 1.6; }
-.empty-sub strong { color: var(--text); font-weight: 600; }
-.empty-starters {
+
+.welcome-title {
+  color: var(--text);
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 0 0 16px;
+}
+
+/* ---- the "here's what this app does" still ---- */
+.welcome-demo {
+  position: relative;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012));
+  /* deep top padding leaves room for the popup to float above the phrase */
+  padding: 46px 18px 14px;
+  margin-bottom: 18px;
+}
+.welcome-demo-text {
+  margin: 0 0 12px;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: var(--text);
+}
+/* the highlighted phrase anchors the floating popup, exactly as a real
+   selection does */
+.welcome-demo-anchor { position: relative; }
+.welcome-demo mark {
+  color: inherit;
+  border-radius: 3px;
+  /* mark defaults to a yellow background colour — clear it, or it shows
+     through beneath the blue and reads as olive */
+  background-color: transparent;
+  /* painted as a background image so it can be swept in from the left */
+  background-image: linear-gradient(rgba(138, 180, 248, 0.4), rgba(138, 180, 248, 0.4));
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  animation: welcome-sweep 0.45s 0.3s ease-out forwards;
+}
+@keyframes welcome-sweep {
+  to { background-size: 100% 100%; }
+}
+.welcome-demo-popup {
+  position: absolute;
+  bottom: calc(100% + 11px);
+  left: 50%;
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(-50%, 5px);
+  animation: welcome-popup 0.26s 0.85s ease-out forwards;
+}
+@keyframes welcome-popup {
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.welcome-demo-popup span {
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1;
+}
+.welcome-demo-caption {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--muted);
+  padding-top: 11px;
+  border-top: 1px solid var(--border);
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-demo mark { animation: none; background-size: 100% 100%; }
+  .welcome-demo-popup { animation: none; opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ---- starter prompts ---- */
+.welcome-starters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.welcome-starter {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 22px;
-}
-.empty-starter {
-  background: var(--surface-raised);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 11px 14px;
-  font: inherit;
-  font-size: 14px;
+  align-items: flex-start;
+  gap: 5px;
   text-align: left;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font: inherit;
   cursor: pointer;
-  transition: border-color 0.12s, background 0.12s;
+  transition: border-color 0.12s, background 0.12s, transform 0.12s;
 }
-.empty-starter:hover { border-color: var(--accent); background: #2e2e2e; }
-.empty-hint { margin: 0; font-size: 12px; opacity: 0.75; }
-.empty-hint kbd {
+.welcome-starter:hover {
+  border-color: var(--accent);
+  background: var(--surface-raised);
+  transform: translateY(-1px);
+}
+.welcome-starter-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.8;
+}
+.welcome-starter-text { font-size: 13.5px; line-height: 1.45; color: var(--text); }
+@media (prefers-reduced-motion: reduce) {
+  .welcome-starter:hover { transform: none; }
+}
+/* one column once two cards would be too cramped to read */
+@media (max-width: 620px) {
+  .welcome-starters { grid-template-columns: 1fr; }
+}
+
+.welcome-hint {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.welcome-hint-sep { opacity: 0.5; }
+.welcome-hint kbd {
   font: inherit;
   font-size: 11px;
   background: var(--surface-raised);
   border: 1px solid var(--border);
   border-radius: 5px;
   padding: 1px 5px;
-  margin: 0 1px;
 }
 
 /* blinking caret riding the tail of the streaming reply */

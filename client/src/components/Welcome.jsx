@@ -20,8 +20,6 @@ export default function Welcome({ onSend }) {
         <img src="/bolt.svg" width="24" height="24" alt="" />
       </div>
 
-      <h2 className="welcome-title">Ask anything. Then pull it apart.</h2>
-
       {/* Decorative: a still of the drill-down flow, not real content. */}
       <div className="welcome-demo" aria-hidden="true">
         {/* The highlighted phrase leads the sentence so it lands on the first

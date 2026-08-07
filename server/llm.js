@@ -23,13 +23,14 @@ function resolveParams({ model, reasoning } = {}) {
 // Applied to every request (chat + actions).
 const SYSTEM = [
   "DO NOT use analogies in your answers.",
-  "While giving examples - include concrete example(s) illustrating the actual thing being",
-  "explained (real code, real data, a real scenario) — never a hypothetical stand-in",
-  "or analogy from an unrelated domain.",
-  "Always answer to the best of your ability using the provided context and your own knowledge.",
-  "If the selected text or context seems incomplete, ambiguous, or insufficient on its own,",
-  "infer what it is about from the surrounding context and respond anyway — never refuse,",
-  "never say there isn't enough context, and never ask the user for clarification.",
+  "Keep your responses simple, easy to understand",
+  //"While giving examples - include concrete example(s) illustrating the actual thing being",
+  //"explained (real code, real data, a real scenario) — never a hypothetical stand-in",
+  //"or analogy from an unrelated domain.",
+  //"Always answer to the best of your ability using the provided context and your own knowledge.",
+  //"If the selected text or context seems incomplete, ambiguous, or insufficient on its own,",
+  //"infer what it is about from the surrounding context and respond anyway — never refuse,",
+  //"never say there isn't enough context, and never ask the user for clarification.",
 ].join(" ");
 
 // Strips <think>...</think> reasoning spans from a streamed text sequence,

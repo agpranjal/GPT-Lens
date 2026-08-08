@@ -1,5 +1,5 @@
 {
-  "name": "skillmaxx-server",
+  "name": "gpt-lens-server",
   "version": "0.1.0",
   "private": true,
   "type": "module",

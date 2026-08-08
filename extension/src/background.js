@@ -1,7 +1,7 @@
-// Service worker: orchestrates the "send this page to Skillmaxx" flow.
+// Service worker: orchestrates the "send this page to GPT Lens" flow.
 // Clicking the toolbar icon injects extract.js into the active tab; once it
 // reports back with the page's content, we stash it in extension storage
-// and focus (or open) the Skillmaxx app tab. bridge.js, running only on
+// and focus (or open) the GPT Lens app tab. bridge.js, running only on
 // that tab, picks the stash up and delivers it into the page.
 const APP_URL = 'http://localhost:5173'
 
@@ -26,14 +26,14 @@ chrome.action.onClicked.addListener(async (tab) => {
   try {
     await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['extract.js'] })
   } catch (err) {
-    console.error('skillmaxx: extraction failed', err)
+    console.error('gpt-lens: extraction failed', err)
     setBadge('!', '#d33')
     clearBadgeSoon(2500)
   }
 })
 
 chrome.runtime.onMessage.addListener((message) => {
-  if (message?.type !== 'skillmaxx:extracted') return
+  if (message?.type !== 'gpt-lens:extracted') return
   const { title, url, content, turns } = message
   chrome.storage.local.set({ pendingImport: { title, url, content, turns } }, async () => {
     try {
@@ -41,7 +41,7 @@ chrome.runtime.onMessage.addListener((message) => {
       setBadge('✓', '#2a2')
       clearBadgeSoon(1500)
     } catch (err) {
-      console.error('skillmaxx: delivery failed', err)
+      console.error('gpt-lens: delivery failed', err)
       setBadge('!', '#d33')
       clearBadgeSoon(2500)
     }

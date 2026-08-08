@@ -1,4 +1,4 @@
-# skillmaxx
+# GPT Lens
 
 A ChatGPT-style chat app (prompt → LLM → streamed response) with a
 **selection-driven follow-up layer**: highlight any part of a reply, pick an
@@ -8,7 +8,7 @@ your own), and the answer streams into a modal.
 ## Stack
 - **Client:** React + Vite
 - **Server:** Node + Express (stateless)
-- **LLM:** [OpenRouter](https://openrouter.ai) via the `openai` SDK (OpenAI-compatible endpoint) — gives access to any model on OpenRouter by changing `OPENROUTER_MODEL`. Default `google/gemini-2.5-flash`.
+- **LLM:** [OpenRouter](https://openrouter.ai) via the `openai` SDK (OpenAI-compatible endpoint) — gives access to any allowlisted model. Default `openai/gpt-oss-120b` with high reasoning.
 
 ## Setup
 

@@ -3,14 +3,26 @@
 // sessions are stored as one JSON blob each — they're always read and
 // written as a unit, so rows-per-frame would buy nothing here.
 import Database from "better-sqlite3";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const dataDir = join(dirname(fileURLToPath(import.meta.url)), "data");
 mkdirSync(dataDir, { recursive: true });
 
-const db = new Database(join(dataDir, "skillmaxx.db"));
+const dbPath = join(dataDir, "gpt-lens.db");
+const legacyDbPath = join(dataDir, "skillmaxx.db");
+
+// Preserve local chats from installations that predate the GPT Lens rename.
+// SQLite's WAL sidecars move with the database when present.
+if (!existsSync(dbPath) && existsSync(legacyDbPath)) {
+  for (const suffix of ["", "-wal", "-shm"]) {
+    const legacyFile = legacyDbPath + suffix;
+    if (existsSync(legacyFile)) renameSync(legacyFile, dbPath + suffix);
+  }
+}
+
+const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
 

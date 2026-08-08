@@ -60,7 +60,7 @@ Key components:
 
 ### Data Model
 
-SQLite DB at `server/data/skillmaxx.db` (created on first run, gitignored).
+SQLite DB at `server/data/gpt-lens.db` (created on first run, gitignored).
 
 - `chats(id, title, created_at, updated_at)`
 - `messages(id, chat_id FK→chats, role, content, created_at)`

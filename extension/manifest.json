@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Skillmaxx",
+  "name": "GPT Lens",
   "version": "1.0.0",
-  "description": "Send the page you're reading into Skillmaxx and drill down into it",
+  "description": "Send the page you're reading into GPT Lens and drill down into it",
   "action": {
     "default_icon": {
       "16": "icons/icon16.png",

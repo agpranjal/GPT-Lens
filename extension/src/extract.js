@@ -221,7 +221,7 @@ async function waitForMountSettle(beforeSig, maxMs = 3000) {
 // also its true chronological order), then convert them in order.
 // Returns turns as `{ role, content }` (not a flattened string): the app
 // imports each turn as a real message so an imported chat renders — and
-// continues — exactly like one composed natively in Skillmaxx.
+// continues — exactly like one composed natively in GPT Lens.
 async function extractClaudeConversation() {
   const indexed = document.querySelector('[data-index][data-rs-index]')
   if (!indexed) return extractClaudeConversationStatic()
@@ -477,7 +477,7 @@ async function extract() {
     }
   }
   chrome.runtime.sendMessage({
-    type: 'skillmaxx:extracted',
+    type: 'gpt-lens:extracted',
     title,
     url: location.href,
     content: markdown ? markdown.slice(0, MAX_CHARS) : undefined,

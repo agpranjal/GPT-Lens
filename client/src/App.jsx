@@ -229,7 +229,7 @@ export default function App() {
 
   // Keep the browser tab in sync with the open chat.
   useEffect(() => {
-    document.title = activeChatTitle ? `${activeChatTitle} — skillmaxx` : "skillmaxx";
+    document.title = activeChatTitle ? `${activeChatTitle} — GPT Lens` : "GPT Lens";
   }, [activeChatTitle]);
 
   // Update one frame's variant within a session (fn receives the prev variant).
@@ -354,7 +354,7 @@ export default function App() {
   useEffect(() => {
     async function onMessage(e) {
       if (e.source !== window) return;
-      if (e.data?.source !== "skillmaxx-extension" || e.data?.type !== "import") return;
+      if (e.data?.source !== "gpt-lens-extension" || e.data?.type !== "import") return;
       const { title, content, turns } = e.data.payload || {};
       if (!content && !turns?.length) return;
       abortRef.current?.abort();
@@ -928,7 +928,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>skillmaxx</h1>
+        <h1>GPT Lens</h1>
         {activeChatTitle && (
           <span className="header-chat-title" title={activeChatTitle}>
             {activeChatTitle}

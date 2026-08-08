@@ -1,10 +1,10 @@
-// Runs only on the Skillmaxx app tab (see manifest.json content_scripts
+// Runs only on the GPT Lens app tab (see manifest.json content_scripts
 // match). Relays a page import stashed by the background worker in
 // extension storage into the page itself, where App.jsx is listening.
 function deliver(payload) {
   if (!payload) return
   window.postMessage(
-    { source: 'skillmaxx-extension', type: 'import', payload },
+    { source: 'gpt-lens-extension', type: 'import', payload },
     window.location.origin
   )
 }

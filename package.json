@@ -1,8 +1,8 @@
 {
-  "name": "skillmaxx",
+  "name": "gpt-lens",
   "version": "0.1.0",
   "private": true,
-  "description": "skillmaxx — chat app with selection-driven follow-up actions powered by OpenRouter",
+  "description": "GPT Lens — chat app with selection-driven follow-up actions powered by OpenRouter",
   "scripts": {
     "dev": "concurrently -n server,client -c blue,green \"npm:dev:server\" \"npm:dev:client\"",
     "dev:server": "npm --prefix server run dev",

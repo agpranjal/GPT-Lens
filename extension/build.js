@@ -18,7 +18,7 @@ for (const [i, name] of entries.entries()) {
       emptyOutDir: i === 0,
       lib: {
         entry: path.resolve(__dirname, `src/${name}.js`),
-        name: `Skillmaxx${name}`,
+        name: `GptLens${name}`,
         formats: ['iife'],
         fileName: () => `${name}.js`,
       },

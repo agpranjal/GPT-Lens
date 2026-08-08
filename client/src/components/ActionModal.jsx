@@ -7,6 +7,17 @@ function shorten(text, n = 28) {
   return t.length > n ? t.slice(0, n) + "…" : t;
 }
 
+function frameIsStreaming(frame) {
+  const variant = frame.variants[frame.activeKey];
+  return (
+    variant?.status === "loading" ||
+    variant?.status === "streaming" ||
+    variant?.followUps?.some(
+      (followUp) => followUp.status === "loading" || followUp.status === "streaming"
+    )
+  );
+}
+
 
 // Modal showing a navigable stack of selection-action explanations.
 // - Tabs (top) = drill-down depth (different snippets) and different lenses
@@ -194,32 +205,39 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
       >
         <header className="modal-header">
           <nav className="modal-tabs" role="tablist" ref={tabsRef}>
-            {frames.map((f, i) => (
-              <div
-                key={f.id}
-                className={`modal-tab${i === index ? " active" : ""}`}
-                ref={i === index ? activeCrumbRef : null}
-                onClick={() => goTo(i)}
-                title={f.selectedText}
-                role="tab"
-                aria-selected={i === index}
-              >
-                <span className="modal-tab-label">{shorten(f.tabLabel || f.selectedText)}</span>
-                {i > 0 && (
-                  <button
-                    className="modal-tab-close"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onCloseFrame(i);
-                    }}
-                    title="Close tab (⌘X)"
-                    aria-label="Close tab"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            ))}
+            {frames.map((f, i) => {
+              const tabStreaming = frameIsStreaming(f);
+              return (
+                <div
+                  key={f.id}
+                  className={`modal-tab${i === index ? " active" : ""}${tabStreaming ? " streaming" : ""}`}
+                  ref={i === index ? activeCrumbRef : null}
+                  onClick={() => goTo(i)}
+                  title={f.selectedText}
+                  role="tab"
+                  aria-selected={i === index}
+                  aria-busy={tabStreaming}
+                >
+                  {tabStreaming && (
+                    <span className="modal-tab-loading" aria-label="Response loading" />
+                  )}
+                  <span className="modal-tab-label">{shorten(f.tabLabel || f.selectedText)}</span>
+                  {i > 0 && (
+                    <button
+                      className="modal-tab-close"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseFrame(i);
+                      }}
+                      title="Close tab (⌘X)"
+                      aria-label="Close tab"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </nav>
           <div className="modal-actions">
             {/* Cut the answer short without closing the tab — whatever has

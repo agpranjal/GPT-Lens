@@ -3,6 +3,52 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
 
+// Some models put HTML-style breaks or escaped newlines in Markdown table
+// cells. ReactMarkdown intentionally renders raw HTML as text. Repair only
+// these break markers, and only inside table cells, without enabling raw HTML.
+function rehypeTableBreaks() {
+  return (tree) => {
+    function visit(node, inCell = false, inCode = false) {
+      if (!node?.children) return;
+      const cell = inCell || node.tagName === "td" || node.tagName === "th";
+      const code = inCode || node.tagName === "code";
+
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        if (cell && child.type === "text") {
+          const marker = /<br\s*\/?>|\\n/gi;
+          if (!marker.test(child.value)) continue;
+          marker.lastIndex = 0;
+
+          if (code) {
+            child.value = child.value.replace(marker, "\n");
+            continue;
+          }
+
+          const replacement = [];
+          let start = 0;
+          for (const match of child.value.matchAll(marker)) {
+            if (match.index > start) {
+              replacement.push({ type: "text", value: child.value.slice(start, match.index) });
+            }
+            replacement.push({ type: "element", tagName: "br", properties: {}, children: [] });
+            start = match.index + match[0].length;
+          }
+          if (start < child.value.length) {
+            replacement.push({ type: "text", value: child.value.slice(start) });
+          }
+          node.children.splice(i, 1, ...replacement);
+          i += replacement.length - 1;
+          continue;
+        }
+        visit(child, cell, code);
+      }
+    }
+
+    visit(tree);
+  };
+}
+
 // The code-block header (language label + copy/select buttons) can't be caught
 // in a text selection: the label is rendered as CSS generated content and the
 // buttons are user-select:none, so neither becomes selectable text. The one
@@ -134,14 +180,28 @@ function Pre(props) {
   );
 }
 
+// Tables are allowed to be wider than the message column. Keeping that width
+// inside a dedicated horizontal scroller prevents the surrounding message's
+// aggressive wrapping rules from crushing columns into a few characters.
+function Table({ node: _node, ...props }) {
+  return (
+    <div className="table-scroll" role="region" aria-label="Scrollable table" tabIndex={0}>
+      <table {...props} />
+    </div>
+  );
+}
+
 // Renders markdown text. Used for assistant replies and action-card bodies.
 export default function Markdown({ children }) {
   return (
     <div className="markdown">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeHighlight, { detect: false, ignoreMissing: true }]]}
-        components={{ pre: Pre }}
+        rehypePlugins={[
+          rehypeTableBreaks,
+          [rehypeHighlight, { detect: false, ignoreMissing: true }],
+        ]}
+        components={{ pre: Pre, table: Table }}
       >
         {children}
       </ReactMarkdown>

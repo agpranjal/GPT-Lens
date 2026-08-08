@@ -25,6 +25,8 @@ const CHAT_SYSTEM = [
   "Match the depth and format they request.",
   "State uncertainty when it is relevant.",
   "Use concise formatting unless more detail would materially improve the answer.",
+  "Use a table only when it makes the answer materially clearer and every cell can stay concise; otherwise use headings or a list.",
+  "When using a table, emit valid GitHub-flavored Markdown only: never put HTML such as <br> in cells, and put substantial code in a fenced code block outside the table.",
 ].join(" ");
 
 const ACTION_SYSTEM = [
@@ -40,6 +42,8 @@ const ACTION_SYSTEM = [
   "Do not repeat or summarize the entire source unless the request requires it.",
   "Prefer concrete details and examples over vague descriptions.",
   "If the source is incorrect or misleading, lead with the correction, then explain the passage in light of the accurate information.",
+  "Use a table only when it makes the answer materially clearer and every cell can stay concise; otherwise use headings or a list.",
+  "When using a table, emit valid GitHub-flavored Markdown only: never put HTML such as <br> in cells, and put substantial code in a fenced code block outside the table.",
 ].join(" ");
 
 // Strips <think>...</think> reasoning spans from a streamed text sequence,

@@ -9,6 +9,8 @@ import {
   streamChat,
   streamAction,
   fetchModels,
+  fetchSettings,
+  updateSettings,
   fetchChats,
   createChat,
   fetchChat,
@@ -146,8 +148,8 @@ export default function App() {
   const [activeId, setActiveId] = useState(null);
   const [panelCollapsed, setPanelCollapsed] = useState(true);
 
-  // Model + reasoning picker (header). Loaded from the server's curated
-  // allowlist; resets to the server default on reload, same as everything else.
+  // Model + reasoning picker (header). Options come from the server's curated
+  // allowlist and the current selections are persisted in SQLite.
   const [modelOptions, setModelOptions] = useState({ models: [], reasoningLevels: [] });
   const [model, setModel] = useState("");
   const [reasoning, setReasoning] = useState("");
@@ -155,15 +157,11 @@ export default function App() {
   llmOptsRef.current = { model, reasoning };
 
   useEffect(() => {
-    fetchModels()
-      .then(({ models, reasoningLevels, defaultModel, defaultReasoning }) => {
+    Promise.all([fetchModels(), fetchSettings()])
+      .then(([{ models, reasoningLevels }, settings]) => {
         setModelOptions({ models, reasoningLevels });
-        const savedModel = localStorage.getItem("skillmaxx:model");
-        const savedReasoning = localStorage.getItem("skillmaxx:reasoning");
-        setModel(models.some((m) => m.id === savedModel) ? savedModel : defaultModel);
-        setReasoning(
-          reasoningLevels.some((r) => r.id === savedReasoning) ? savedReasoning : defaultReasoning
-        );
+        setModel(settings.model);
+        setReasoning(settings.reasoning);
       })
       .catch(() => {}); // dropdown just stays hidden if this fails
   }, []);
@@ -175,14 +173,25 @@ export default function App() {
       .catch(() => {}); // rail just stays empty if the server is down
   }, []);
 
-  // Persist the user's picks so they survive a reload.
+  // Persist selector changes in SQLite. The UI updates immediately, then the
+  // server response confirms the stored value.
   const handleModelChange = useCallback((id) => {
     setModel(id);
-    localStorage.setItem("skillmaxx:model", id);
+    updateSettings({ model: id })
+      .then((settings) => {
+        setModel(settings.model);
+      })
+      .catch(() => fetchSettings().then((settings) => setModel(settings.model)).catch(() => {}));
   }, []);
   const handleReasoningChange = useCallback((id) => {
     setReasoning(id);
-    localStorage.setItem("skillmaxx:reasoning", id);
+    updateSettings({ reasoning: id })
+      .then((settings) => {
+        setReasoning(settings.reasoning);
+      })
+      .catch(() =>
+        fetchSettings().then((settings) => setReasoning(settings.reasoning)).catch(() => {})
+      );
   }, []);
 
   const messagesRef = useRef(messages);

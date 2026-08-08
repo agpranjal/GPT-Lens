@@ -26,15 +26,18 @@ import {
   upsertSession,
   deleteSession,
   searchMessages,
+  getSettings,
+  updateSettings,
 } from "./db.js";
 
 // Pull { model, reasoning } out of a request body, validating each against
 // the allowlist. Invalid/missing values fall through to the server default.
 function resolveOpts(body) {
-  const model = isValidModel(body?.model) ? body.model : undefined;
+  const settings = getSettings(DEFAULT_MODEL, DEFAULT_REASONING);
+  const model = isValidModel(body?.model) ? body.model : settings.model;
   const reasoning = REASONING_LEVELS.some((r) => r.id === body?.reasoning)
     ? body.reasoning
-    : undefined;
+    : settings.reasoning;
   return { model, reasoning };
 }
 
@@ -60,6 +63,28 @@ app.get("/api/models", (_req, res) => {
     defaultModel: DEFAULT_MODEL,
     defaultReasoning: DEFAULT_REASONING,
   });
+});
+
+app.get("/api/settings", (_req, res) => {
+  res.json(getSettings(DEFAULT_MODEL, DEFAULT_REASONING));
+});
+
+app.patch("/api/settings", (req, res) => {
+  const { model, reasoning } = req.body || {};
+  if (model === undefined && reasoning === undefined) {
+    return res.status(400).json({ error: "model or reasoning is required" });
+  }
+  if (model !== undefined && !isValidModel(model)) {
+    return res.status(400).json({ error: "invalid model" });
+  }
+  if (
+    reasoning !== undefined &&
+    !REASONING_LEVELS.some((level) => level.id === reasoning)
+  ) {
+    return res.status(400).json({ error: "invalid reasoning level" });
+  }
+  getSettings(DEFAULT_MODEL, DEFAULT_REASONING);
+  res.json(updateSettings({ model, reasoning }));
 });
 
 // Pipe an OpenAI-compatible chat-completion stream to the HTTP response as

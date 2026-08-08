@@ -35,9 +35,38 @@ db.exec(`
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS app_settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    model TEXT NOT NULL,
+    reasoning TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
   CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id);
   CREATE INDEX IF NOT EXISTS idx_sessions_chat ON sessions(chat_id);
 `);
+
+export function getSettings(defaultModel, defaultReasoning) {
+  db.prepare(
+    `INSERT OR IGNORE INTO app_settings (id, model, reasoning, updated_at)
+     VALUES (1, ?, ?, ?)`
+  ).run(defaultModel, defaultReasoning, Date.now());
+  return db
+    .prepare("SELECT model, reasoning, updated_at FROM app_settings WHERE id = 1")
+    .get();
+}
+
+export function updateSettings({ model, reasoning }) {
+  db.prepare(
+    `UPDATE app_settings
+     SET model = COALESCE(?, model),
+         reasoning = COALESCE(?, reasoning),
+         updated_at = ?
+     WHERE id = 1`
+  ).run(model ?? null, reasoning ?? null, Date.now());
+  return db
+    .prepare("SELECT model, reasoning, updated_at FROM app_settings WHERE id = 1")
+    .get();
+}
 
 export function listChats() {
   return db

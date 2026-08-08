@@ -35,11 +35,11 @@ export const REASONING_LEVELS = [
 
 export const DEFAULT_MODEL = MODELS.some((m) => m.id === process.env.OPENROUTER_MODEL)
   ? process.env.OPENROUTER_MODEL
-  : process.env.OPENROUTER_MODEL || MODELS[1].id; // gpt-5.2
+  : "openai/gpt-oss-120b";
 
 export const DEFAULT_REASONING = REASONING_LEVELS.some((r) => r.id === process.env.OPENROUTER_REASONING)
   ? process.env.OPENROUTER_REASONING
-  : "off";
+  : "high";
 
 export function isValidModel(id) {
   return MODELS.some((m) => m.id === id);

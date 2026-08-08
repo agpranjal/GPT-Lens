@@ -28,6 +28,13 @@ export async function fetchModels() {
   return res.json();
 }
 
+export const fetchSettings = () => json("/api/settings");
+export const updateSettings = (settings) =>
+  json("/api/settings", {
+    method: "PATCH",
+    body: JSON.stringify(settings),
+  });
+
 // Small JSON helper for the non-streaming endpoints.
 async function json(url, opts = {}) {
   const res = await fetch(url, {

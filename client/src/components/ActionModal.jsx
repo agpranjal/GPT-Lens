@@ -42,6 +42,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   const bodyRef = useRef(null);
   const tabsRef = useRef(null);
   const activeCrumbRef = useRef(null);
+  const knownFrameIdsRef = useRef(new Set(frames.map((f) => String(f.id))));
   const scrollPositions = useRef({}); // frame.id -> last scrollTop in .modal-body
   const settlingRef = useRef(false); // true while a tab switch is settling
 
@@ -107,6 +108,27 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     if (t.left < s.left) strip.scrollLeft -= s.left - t.left;
     else if (t.right > s.right) strip.scrollLeft += t.right - s.right;
   }, [index]);
+
+  // Drill-down tabs are inserted in the background, so `index` deliberately
+  // stays unchanged and the active-tab effect above does not run. Detect the
+  // newly inserted frame and reveal it in the horizontal strip without
+  // switching away from the answer the user is currently reading.
+  useLayoutEffect(() => {
+    const strip = tabsRef.current;
+    const currentIds = new Set(frames.map((f) => String(f.id)));
+    const addedFrame = frames.find((f) => !knownFrameIdsRef.current.has(String(f.id)));
+    knownFrameIdsRef.current = currentIds;
+    if (!strip || !addedFrame) return;
+
+    const tab = Array.from(strip.children).find(
+      (el) => el.dataset.frameId === String(addedFrame.id)
+    );
+    if (!tab) return;
+    const t = tab.getBoundingClientRect();
+    const s = strip.getBoundingClientRect();
+    if (t.left < s.left) strip.scrollLeft -= s.left - t.left;
+    else if (t.right > s.right) strip.scrollLeft += t.right - s.right;
+  }, [frames]);
 
   function closeFollowUp() {
     setFollowUpOpen(false);
@@ -210,6 +232,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
               return (
                 <div
                   key={f.id}
+                  data-frame-id={f.id}
                   className={`modal-tab${i === index ? " active" : ""}${tabStreaming ? " streaming" : ""}`}
                   ref={i === index ? activeCrumbRef : null}
                   onClick={() => goTo(i)}

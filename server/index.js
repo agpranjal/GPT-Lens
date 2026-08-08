@@ -2,6 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import {
+  actionStream,
   chatStream,
   makeReasoningFilter,
 } from "./llm.js";
@@ -238,7 +239,7 @@ app.post("/api/action", async (req, res) => {
       ...(Array.isArray(history) ? history : []),
       ...(question ? [{ role: "user", content: question }] : []),
     ];
-    await pipeStream(res, chatStream(messages, resolveOpts(req.body)));
+    await pipeStream(res, actionStream(messages, resolveOpts(req.body)));
   } catch (err) {
     handleStreamError(res, err, "/api/action");
   }

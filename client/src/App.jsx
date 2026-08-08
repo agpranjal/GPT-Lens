@@ -118,6 +118,11 @@ const dropHeaderRects = (rects) => {
   );
 };
 
+const supportsCustomHighlights =
+  typeof CSS !== "undefined" &&
+  CSS.highlights &&
+  typeof Highlight !== "undefined";
+
 export default function App() {
   const [messages, setMessages] = useState([]); // { id, role, content }
   const [chatLoading, setChatLoading] = useState(false);
@@ -132,6 +137,21 @@ export default function App() {
 
   // Active selection: { selectedText, sourceMessageText, rect, origin }
   const [selection, setSelection] = useState(null);
+
+  // Keep the exact DOM Range painted after focus moves into the popup input.
+  // CSS Custom Highlights follow text across nested markup (notably table
+  // cells), where mirroring getClientRects() can fail or paint coarse boxes.
+  useEffect(() => {
+    if (!supportsCustomHighlights) return;
+    CSS.highlights.delete("drilldown-selection");
+    if (selection?.highlightRange) {
+      CSS.highlights.set(
+        "drilldown-selection",
+        new Highlight(selection.highlightRange)
+      );
+    }
+    return () => CSS.highlights.delete("drilldown-selection");
+  }, [selection]);
 
   // Bumped whenever the composer should grab focus (new chat, chat open, "/").
   const [focusToken, setFocusToken] = useState(0);
@@ -286,6 +306,7 @@ export default function App() {
             selectedText: text,
             sourceMessageText: v?.text || "",
             rect: clipRectToEl(rawRect, modalBody) || rawRect,
+            highlightRange: range.cloneRange(),
             highlightRects: clipRectsToEl(rawHighlightRects, modalBody),
             origin: "modal",
           });
@@ -310,6 +331,7 @@ export default function App() {
         selectedText: text,
         sourceMessageText: source.content,
         rect: clipRectToEl(rawRect, messagesEl) || rawRect,
+        highlightRange: range.cloneRange(),
         highlightRects: clipRectsToEl(rawHighlightRects, messagesEl),
         origin: "chat",
       });
@@ -953,15 +975,17 @@ export default function App() {
         <>
           {/* Our own copy of the highlight, so it survives focus moving into
               the popup's input (the native one stops painting then). */}
-          <div className="selection-highlight" aria-hidden="true">
-            {selection.highlightRects?.map((r, i) => (
-              <div
-                key={i}
-                className="selection-highlight-rect"
-                style={{ top: r.top, left: r.left, width: r.width, height: r.height }}
-              />
-            ))}
-          </div>
+          {!supportsCustomHighlights && (
+            <div className="selection-highlight" aria-hidden="true">
+              {selection.highlightRects?.map((r, i) => (
+                <div
+                  key={i}
+                  className="selection-highlight-rect"
+                  style={{ top: r.top, left: r.left, width: r.width, height: r.height }}
+                />
+              ))}
+            </div>
+          )}
           <SelectionPopup rect={selection.rect} onAction={handleAction} />
         </>
       )}

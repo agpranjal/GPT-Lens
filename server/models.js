@@ -31,6 +31,7 @@ export const REASONING_LEVELS = [
   { id: "low", label: "Low", maxTokens: 128 },
   { id: "medium", label: "Medium", maxTokens: 512 },
   { id: "high", label: "High", maxTokens: 2048 },
+  { id: "max", label: "Max", maxTokens: 4096 },
 ];
 
 export const DEFAULT_MODEL = MODELS.some((m) => m.id === process.env.OPENROUTER_MODEL)

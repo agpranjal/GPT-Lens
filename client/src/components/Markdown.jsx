@@ -15,6 +15,22 @@ function rehypeTableBreaks() {
 
       for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
+
+        // Markdown parsers represent a literal `<br>` as a `raw` HAST node,
+        // not a text node. ReactMarkdown escapes raw nodes unless rehype-raw is
+        // enabled, which is why the tag used to appear verbatim. Convert only
+        // an exact break tag inside table cells; all other HTML stays escaped.
+        if (
+          cell &&
+          child.type === "raw" &&
+          /^<br\s*\/?>$/i.test(child.value.trim())
+        ) {
+          node.children[i] = code
+            ? { type: "text", value: "\n" }
+            : { type: "element", tagName: "br", properties: {}, children: [] };
+          continue;
+        }
+
         if (cell && child.type === "text") {
           const marker = /<br\s*\/?>|\\n/gi;
           if (!marker.test(child.value)) continue;

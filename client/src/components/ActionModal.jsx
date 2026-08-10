@@ -60,7 +60,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
       setTabTooltip({
         text,
         left: Math.max(12 + halfWidth, Math.min(rect.left + rect.width / 2, window.innerWidth - 12 - halfWidth)),
-        top: rect.bottom + 7,
+        top: rect.bottom + 4,
       });
     }, 180);
   }

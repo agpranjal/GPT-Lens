@@ -132,7 +132,15 @@ textarea:focus-visible {
 }
 .model-settings-divider { color: #666; }
 .model-settings-reasoning { color: var(--muted); white-space: nowrap; }
-.model-settings-chevron { color: var(--muted); margin-left: 4px; transform: translateY(-1px); }
+.model-settings-chevron {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  margin: -3px 1px 0 5px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg);
+}
 
 .model-settings-panel {
   position: absolute;
@@ -155,11 +163,15 @@ textarea:focus-visible {
 }
 .model-settings-field:first-child { position: relative; }
 .model-settings-field:first-child::after {
-  content: "⌄";
+  content: "";
   position: absolute;
-  right: 12px;
-  bottom: 8px;
-  color: var(--muted);
+  right: 13px;
+  bottom: 14px;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--muted);
+  border-bottom: 1.5px solid var(--muted);
+  transform: rotate(45deg);
   pointer-events: none;
 }
 .model-settings-field select {

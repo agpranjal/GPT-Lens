@@ -58,7 +58,7 @@ export default function ModelSelector({
         <span className="model-settings-model">{selected?.label}</span>
         <span className="model-settings-divider" aria-hidden="true">·</span>
         <span className="model-settings-reasoning">{reasoningLabel}</span>
-        <span className="model-settings-chevron" aria-hidden="true">⌄</span>
+        <span className="model-settings-chevron" aria-hidden="true" />
       </button>
 
       {open && (

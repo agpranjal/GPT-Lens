@@ -12,6 +12,17 @@ export default function ModelSelector({
 
   const tiers = [...new Set(models.map((m) => m.tier))];
   const selected = models.find((m) => m.id === model);
+  const capability = selected?.reasoning;
+  const supported = capability?.supported_efforts || [];
+  const adjustableLevels = reasoningLevels.filter((level) =>
+    supported.includes(level.id === "off" ? "none" : level.id)
+  );
+  const fixedReasoning = capability?.mandatory && adjustableLevels.length === 0;
+  const reasoningTitle = fixedReasoning
+    ? "Reasoning is always on for this model and cannot be adjusted"
+    : adjustableLevels.length === 0
+      ? "This model does not expose an adjustable reasoning control"
+      : "Reasoning depth";
 
   return (
     <div className="model-selector">
@@ -35,13 +46,18 @@ export default function ModelSelector({
       </select>
       <select
         className="reasoning-select"
-        value={reasoning}
+        value={adjustableLevels.some((level) => level.id === reasoning) ? reasoning : ""}
         onChange={(e) => onReasoningChange(e.target.value)}
-        title="Reasoning depth"
+        title={reasoningTitle}
+        aria-label={reasoningTitle}
+        disabled={fixedReasoning || adjustableLevels.length === 0}
       >
-        {reasoningLevels.map((r) => (
+        {(fixedReasoning || adjustableLevels.length === 0) && (
+          <option value="">{fixedReasoning ? "Reasoning · Always on" : "Reasoning · Fixed"}</option>
+        )}
+        {adjustableLevels.map((r) => (
           <option key={r.id} value={r.id}>
-            Reasoning: {r.label}
+            Reasoning · {r.label}
           </option>
         ))}
       </select>

@@ -181,7 +181,14 @@ export default function App() {
       .then(([{ models, reasoningLevels }, settings]) => {
         setModelOptions({ models, reasoningLevels });
         setModel(settings.model);
-        setReasoning(settings.reasoning);
+        const selected = models.find((candidate) => candidate.id === settings.model);
+        const supported = selected?.reasoning?.supported_efforts || [];
+        const storedEffort = settings.reasoning === "off" ? "none" : settings.reasoning;
+        const normalized = supported.length && !supported.includes(storedEffort)
+          ? (selected.reasoning.default_effort === "none" ? "off" : selected.reasoning.default_effort)
+          : settings.reasoning;
+        setReasoning(normalized);
+        if (normalized && normalized !== settings.reasoning) updateSettings({ reasoning: normalized }).catch(() => {});
       })
       .catch(() => {}); // dropdown just stays hidden if this fails
   }, []);
@@ -196,13 +203,22 @@ export default function App() {
   // Persist selector changes in SQLite. The UI updates immediately, then the
   // server response confirms the stored value.
   const handleModelChange = useCallback((id) => {
+    const selected = modelOptions.models.find((candidate) => candidate.id === id);
+    const supported = selected?.reasoning?.supported_efforts || [];
+    const currentEffort = reasoning === "off" ? "none" : reasoning;
+    const nextReasoning = supported.includes(currentEffort)
+      ? reasoning
+      : supported.includes(selected?.reasoning?.default_effort)
+        ? (selected.reasoning.default_effort === "none" ? "off" : selected.reasoning.default_effort)
+        : reasoning;
     setModel(id);
-    updateSettings({ model: id })
+    setReasoning(nextReasoning);
+    updateSettings({ model: id, reasoning: nextReasoning })
       .then((settings) => {
         setModel(settings.model);
       })
       .catch(() => fetchSettings().then((settings) => setModel(settings.model)).catch(() => {}));
-  }, []);
+  }, [modelOptions.models, reasoning]);
   const handleReasoningChange = useCallback((id) => {
     setReasoning(id);
     updateSettings({ reasoning: id })

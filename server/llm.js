@@ -1,22 +1,16 @@
 import OpenAI from "openai";
-import { DEFAULT_MODEL, DEFAULT_REASONING, reasoningMaxTokens } from "./models.js";
+import { DEFAULT_MODEL, reasoningForRequest } from "./models.js";
 
 const BASE_URL = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
 const MAX_TOKENS = Number(process.env.OPENROUTER_MAX_TOKENS) || 8192;
 
 // Resolve the per-request model/reasoning overrides (from the UI) down to
 // concrete values, falling back to the server defaults.
-function resolveParams({ model, reasoning } = {}) {
-  const budget = reasoningMaxTokens(reasoning) ?? reasoningMaxTokens(DEFAULT_REASONING);
+async function resolveParams({ model, reasoning } = {}) {
+  const resolvedModel = model || DEFAULT_MODEL;
   return {
-    model: model || DEFAULT_MODEL,
-    // Hard thinking-token budget so reasoning models (e.g. gemini-2.5-pro)
-    // keep their answer quality without stalling on time-to-first-token.
-    // Some models (e.g. gemini-3.1-pro, gpt-5-mini) treat reasoning as
-    // mandatory and 400 on an explicit 0 — clamp "off" to the smallest
-    // nonzero budget instead, which those models accept and everything
-    // else still treats as effectively no reasoning.
-    reasoning: { max_tokens: Math.max(budget, 1) },
+    model: resolvedModel,
+    reasoning: await reasoningForRequest(resolvedModel, reasoning),
   };
 }
 
@@ -116,13 +110,13 @@ function llm() {
 // Multi-turn chat, streamed. `messages` is [{ role: "user" | "assistant", content }].
 // `opts`: { model?, reasoning? } — reasoning is a level id ("off"|"low"|"medium"|"high").
 // Returns a Promise<Stream> of OpenAI chat-completion chunks.
-export function chatStream(messages, opts, { system = CHAT_SYSTEM } = {}) {
-  const { model, reasoning } = resolveParams(opts);
+export async function chatStream(messages, opts, { system = CHAT_SYSTEM } = {}) {
+  const { model, reasoning } = await resolveParams(opts);
   return llm().chat.completions.create({
     model,
     max_tokens: MAX_TOKENS,
     stream: true,
-    reasoning,
+    ...(reasoning ? { reasoning } : {}),
     messages: [
       { role: "system", content: system },
       ...messages.map((m) => ({

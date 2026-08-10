@@ -81,7 +81,7 @@ textarea:focus-visible {
 /* ---- header ---- */
 .app-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 12px;
   padding: 12px 20px;
   border-bottom: 1px solid var(--border);
@@ -105,6 +105,7 @@ textarea:focus-visible {
   display: flex;
   gap: 8px;
   margin-left: auto;
+  min-width: 0;
 }
 .model-select,
 .reasoning-select {
@@ -112,16 +113,34 @@ textarea:focus-visible {
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 5px 8px;
+  min-width: 0;
+  height: 36px;
+  padding: 5px 30px 5px 10px;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
   outline: none;
-  max-width: 160px;
+  text-overflow: ellipsis;
 }
+.model-select { width: clamp(150px, 22vw, 210px); }
+.reasoning-select { width: clamp(160px, 20vw, 190px); }
 .model-select:hover,
-.reasoning-select:hover { border-color: var(--accent); }
-.reasoning-select { max-width: 130px; }
+.reasoning-select:not(:disabled):hover { border-color: var(--accent); }
+.reasoning-select:disabled {
+  color: var(--muted);
+  cursor: default;
+  opacity: 1;
+  border-style: dashed;
+}
+
+@media (max-width: 620px) {
+  .app-header { gap: 8px; padding-inline: 12px; }
+  .app-header h1,
+  .header-chat-title { display: none; }
+  .model-selector { width: 100%; margin-left: 0; }
+  .model-select,
+  .reasoning-select { flex: 1; width: auto; }
+}
 
 /* ---- selection highlight overlay ---- */
 ::highlight(drilldown-selection) {

@@ -16,6 +16,7 @@ import {
   DEFAULT_MODEL,
   DEFAULT_REASONING,
   isValidModel,
+  modelsWithReasoning,
 } from "./models.js";
 import {
   listChats,
@@ -57,9 +58,9 @@ app.use(express.json({ limit: "1mb" }));
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 // The curated model + reasoning-level list the UI renders as a dropdown.
-app.get("/api/models", (_req, res) => {
+app.get("/api/models", async (_req, res) => {
   res.json({
-    models: MODELS,
+    models: await modelsWithReasoning(),
     reasoningLevels: REASONING_LEVELS,
     defaultModel: DEFAULT_MODEL,
     defaultReasoning: DEFAULT_REASONING,

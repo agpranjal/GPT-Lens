@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from "react";
+
 // Header controls: which model answers, and how much it's allowed to reason.
 // Grouped by tier so the dropdown stays scannable as the curated list grows.
 export default function ModelSelector({
@@ -8,6 +10,25 @@ export default function ModelSelector({
   onModelChange,
   onReasoningChange,
 }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsideClick = (event) => {
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
   if (!models.length) return null;
 
   const tiers = [...new Set(models.map((m) => m.tier))];
@@ -18,49 +39,79 @@ export default function ModelSelector({
     supported.includes(level.id === "off" ? "none" : level.id)
   );
   const fixedReasoning = capability?.mandatory && adjustableLevels.length === 0;
-  const reasoningTitle = fixedReasoning
-    ? "Reasoning is always on for this model and cannot be adjusted"
+  const selectedLevel = adjustableLevels.find((level) => level.id === reasoning);
+  const reasoningLabel = fixedReasoning
+    ? "Always on"
     : adjustableLevels.length === 0
-      ? "This model does not expose an adjustable reasoning control"
-      : "Reasoning depth";
+      ? "Fixed"
+      : selectedLevel?.label || "Choose";
 
   return (
-    <div className="model-selector">
-      <select
-        className="model-select"
-        value={model}
-        onChange={(e) => onModelChange(e.target.value)}
-        title={selected ? `${selected.label} — ${selected.price}` : undefined}
+    <div className="model-selector" ref={rootRef}>
+      <button
+        type="button"
+        className="model-settings-trigger"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        aria-controls="model-settings-panel"
       >
-        {tiers.map((tier) => (
-          <optgroup key={tier} label={tier}>
-            {models
-              .filter((m) => m.tier === tier)
-              .map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
+        <span className="model-settings-model">{selected?.label}</span>
+        <span className="model-settings-divider" aria-hidden="true">·</span>
+        <span className="model-settings-reasoning">{reasoningLabel}</span>
+        <span className="model-settings-chevron" aria-hidden="true">⌄</span>
+      </button>
+
+      {open && (
+        <div className="model-settings-panel" id="model-settings-panel">
+          <label className="model-settings-field">
+            <span>Model</span>
+            <select
+              value={model}
+              onChange={(event) => {
+                onModelChange(event.target.value);
+                event.currentTarget.blur();
+              }}
+            >
+              {tiers.map((tier) => (
+                <optgroup key={tier} label={tier}>
+                  {models
+                    .filter((item) => item.tier === tier)
+                    .map((item) => (
+                      <option key={item.id} value={item.id}>{item.label}</option>
+                    ))}
+                </optgroup>
               ))}
-          </optgroup>
-        ))}
-      </select>
-      <select
-        className="reasoning-select"
-        value={adjustableLevels.some((level) => level.id === reasoning) ? reasoning : ""}
-        onChange={(e) => onReasoningChange(e.target.value)}
-        title={reasoningTitle}
-        aria-label={reasoningTitle}
-        disabled={fixedReasoning || adjustableLevels.length === 0}
-      >
-        {(fixedReasoning || adjustableLevels.length === 0) && (
-          <option value="">{fixedReasoning ? "Reasoning · Always on" : "Reasoning · Fixed"}</option>
-        )}
-        {adjustableLevels.map((r) => (
-          <option key={r.id} value={r.id}>
-            Reasoning · {r.label}
-          </option>
-        ))}
-      </select>
+            </select>
+          </label>
+
+          <div className="model-settings-meta">
+            <span>{selected?.tier}</span>
+            <span>{selected?.price}</span>
+          </div>
+
+          <div className="model-settings-field">
+            <span>Reasoning</span>
+            {adjustableLevels.length > 0 ? (
+              <div className="reasoning-options">
+                {adjustableLevels.map((level) => (
+                  <button
+                    type="button"
+                    key={level.id}
+                    className={level.id === reasoning ? "active" : ""}
+                    onClick={() => onReasoningChange(level.id)}
+                  >
+                    {level.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="reasoning-fixed">
+                {fixedReasoning ? "Always on for this model" : "Not adjustable for this model"}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

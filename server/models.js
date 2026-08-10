@@ -12,17 +12,17 @@ export const MODELS = [
   { id: "anthropic/claude-sonnet-5", label: "Claude Sonnet 5", tier: "Balanced", price: "$2 / $10 per M" },
   { id: "openai/gpt-5.1", label: "GPT-5.1", tier: "Balanced", price: "$1.25 / $10 per M" },
   { id: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro", tier: "Balanced", price: "$1.25 / $10 per M" },
-  { id: "deepseek/deepseek-v4-pro", label: "DeepSeek V4 Pro", tier: "Balanced", price: "$0.43 / $0.87 per M" },
+  { id: "deepseek/deepseek-v4-pro", label: "DeepSeek V4 Pro", tier: "Balanced", price: "$0.435 / $0.87 per M" },
   { id: "minimax/minimax-m3", label: "MiniMax M3", tier: "Balanced", price: "$0.30 / $1.20 per M" },
 
   // Fast & cheap — still solid for short explanations.
-  { id: "openai/gpt-5.6-luna", label: "GPT-5.6 Luna", tier: "Fast & cheap", price: "$0.50 / $3 per M" },
+  { id: "openai/gpt-5.6-luna", label: "GPT-5.6 Luna", tier: "Fast & cheap", price: "$0.10 / $0.60 per M" },
   { id: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash", tier: "Fast & cheap", price: "$0.30 / $2.50 per M" },
   { id: "anthropic/claude-haiku-4.5", label: "Claude Haiku 4.5", tier: "Fast & cheap", price: "$1 / $5 per M" },
   { id: "openai/gpt-5-mini", label: "GPT-5 Mini", tier: "Fast & cheap", price: "$0.25 / $2 per M" },
-  { id: "deepseek/deepseek-v4-flash", label: "DeepSeek V4 Flash", tier: "Fast & cheap", price: "$0.10 / $0.20 per M" },
-  { id: "openai/gpt-oss-120b", label: "GPT-OSS 120B", tier: "Fast & cheap", price: "$0.03 / $0.15 per M" },
-  { id: "minimax/minimax-m2.5", label: "MiniMax M2.5", tier: "Fast & cheap", price: "$0.12 / $0.48 per M" },
+  { id: "deepseek/deepseek-v4-flash", label: "DeepSeek V4 Flash", tier: "Fast & cheap", price: "$0.14 / $0.28 per M" },
+  { id: "openai/gpt-oss-120b", label: "GPT-OSS 120B", tier: "Fast & cheap", price: "$0.037 / $0.17 per M" },
+  { id: "minimax/minimax-m2.5", label: "MiniMax M2.5", tier: "Fast & cheap", price: "$0.22 / $0.90 per M" },
 ];
 
 // Reasoning-token budget presets (mapped to OpenRouter's unified `reasoning`
@@ -39,35 +39,52 @@ export const REASONING_LEVELS = [
 
 const MODEL_METADATA_URL = "https://openrouter.ai/api/v1/models";
 const METADATA_TTL_MS = 60 * 60 * 1000;
-let reasoningMetadata = new Map();
+let modelMetadata = new Map();
 let metadataFetchedAt = 0;
 
 // OpenRouter publishes the reasoning controls each model actually accepts.
 // Cache them so the UI and request validation use the same live capabilities.
 export async function refreshReasoningMetadata() {
-  if (Date.now() - metadataFetchedAt < METADATA_TTL_MS && reasoningMetadata.size) return;
+  if (Date.now() - metadataFetchedAt < METADATA_TTL_MS && modelMetadata.size) return;
   try {
     const response = await fetch(MODEL_METADATA_URL);
     if (!response.ok) throw new Error(`OpenRouter metadata request failed (${response.status})`);
     const { data } = await response.json();
-    reasoningMetadata = new Map(
-      data.filter((model) => model.reasoning).map((model) => [model.id, model.reasoning])
-    );
+    modelMetadata = new Map(data.map((model) => [model.id, model]));
     metadataFetchedAt = Date.now();
   } catch (error) {
     // Keep serving the last successful metadata snapshot during an outage.
-    if (!reasoningMetadata.size) console.warn("reasoning metadata unavailable:", error.message);
+    if (!modelMetadata.size) console.warn("OpenRouter model metadata unavailable:", error.message);
   }
+}
+
+function formatPerMillion(perToken) {
+  const value = Number(perToken) * 1_000_000;
+  if (!Number.isFinite(value)) return null;
+  return `$${value.toFixed(3).replace(/\.?0+$/, "")}`;
+}
+
+function livePrice(metadata) {
+  const input = formatPerMillion(metadata?.pricing?.prompt);
+  const output = formatPerMillion(metadata?.pricing?.completion);
+  return input && output ? `${input} / ${output} per M` : null;
 }
 
 export async function modelsWithReasoning() {
   await refreshReasoningMetadata();
-  return MODELS.map((model) => ({ ...model, reasoning: reasoningMetadata.get(model.id) || null }));
+  return MODELS.map((model) => {
+    const metadata = modelMetadata.get(model.id);
+    return {
+      ...model,
+      price: livePrice(metadata) || model.price,
+      reasoning: metadata?.reasoning || null,
+    };
+  });
 }
 
 export async function reasoningForRequest(modelId, levelId) {
   await refreshReasoningMetadata();
-  const capability = reasoningMetadata.get(modelId);
+  const capability = modelMetadata.get(modelId)?.reasoning;
   if (!capability) return undefined;
 
   const supported = capability.supported_efforts;

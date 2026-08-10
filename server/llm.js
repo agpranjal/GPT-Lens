@@ -43,7 +43,7 @@ const ACTION_SYSTEM = [
   "Prefer concrete details and examples over vague descriptions.",
   "If the source is incorrect or misleading, lead with the correction, then explain the passage in light of the accurate information.",
   "Use a table only when it makes the answer materially clearer and every cell can stay concise; otherwise use headings or a list.",
-  "When using a table, emit valid GitHub-flavored Markdown only: never put HTML such as <br> in cells, and put substantial code in a fenced code block outside the table.",
+  "When using a table, emit valid GitHub-flavored Markdown only: never put HTML code/tags such as <br> in cells, and put substantial code in a fenced code block outside the table.",
 ].join(" ");
 
 // Strips <think>...</think> reasoning spans from a streamed text sequence,

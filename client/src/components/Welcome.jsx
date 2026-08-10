@@ -17,7 +17,7 @@ export default function Welcome({ onSend }) {
   return (
     <div className="welcome">
       <div className="welcome-mark" aria-hidden="true">
-        <img src="/bolt.svg" width="24" height="24" alt="" />
+        <img src="/lens.svg" width="24" height="24" alt="" />
       </div>
 
       {/* Decorative: a still of the drill-down flow, not real content. */}

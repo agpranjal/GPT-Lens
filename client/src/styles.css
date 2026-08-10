@@ -293,7 +293,7 @@ textarea:focus-visible {
   padding: 0 20px;
 }
 
-/* brand mark, lit with the bolt's own warm colour rather than the UI accent */
+/* brand mark: the app's accent frames the lens without overpowering it */
 .welcome-mark {
   width: 46px;
   height: 46px;
@@ -304,7 +304,7 @@ textarea:focus-visible {
   border-radius: 14px;
   background: var(--surface-raised);
   border: 1px solid var(--border);
-  box-shadow: 0 0 0 5px rgba(255, 170, 40, 0.045), 0 10px 28px rgba(255, 140, 0, 0.1);
+  box-shadow: 0 0 0 5px rgba(138, 180, 248, 0.035), 0 10px 28px rgba(80, 130, 220, 0.08);
 }
 
 /* ---- the "here's what this app does" still ---- */

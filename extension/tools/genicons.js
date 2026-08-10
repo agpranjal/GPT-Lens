@@ -1,9 +1,9 @@
-// Regenerates the toolbar icons (transparent-background orange bolt) at all
-// sizes. Shape mirrors tools/bolt.svg. Run from the extension dir:
+// Regenerates the toolbar icons (transparent-background lens + sparkle) at all
+// sizes. Shape mirrors tools/lens.svg. Run from the extension dir:
 //   node tools/genicons.js icons
-const zlib = require('zlib');
-const fs = require('fs');
-const path = require('path');
+import zlib from 'node:zlib';
+import fs from 'node:fs';
+import path from 'node:path';
 
 // CRC32
 const crcTable = (() => {
@@ -49,13 +49,12 @@ function encodePNG(width, height, rgba) {
   ]);
 }
 
-// Material "flash_on" bolt: M7 2v11h3v9l7-12h-4l4-8z  (24x24 grid)
-const poly = [
-  [7, 2], [7, 13], [10, 13], [10, 22], [17, 10], [13, 10], [17, 2],
+const sparkle = [
+  [12.25, 5.25], [12.8, 7.2], [14.75, 7.75], [12.8, 8.3],
+  [12.25, 10.25], [11.7, 8.3], [9.75, 7.75], [11.7, 7.2],
 ];
-const bx0 = 7, bx1 = 17, by0 = 2, by1 = 22; // bolt bounding box
 
-function pointInPoly(x, y) {
+function pointInPoly(x, y, poly) {
   let inside = false;
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
     const xi = poly[i][0], yi = poly[i][1];
@@ -65,33 +64,30 @@ function pointInPoly(x, y) {
   return inside;
 }
 
-// gradient top -> bottom
-const top = [0xff, 0xd5, 0x4a];
-const bot = [0xff, 0x7a, 0x00];
+function distanceToSegment(x, y, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const t = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(x - (x1 + t * dx), y - (y1 + t * dy));
+}
+
+const blue = [0x8a, 0xb4, 0xf8];
+const white = [0xee, 0xf5, 0xff];
 
 function render(size) {
   const SS = 4;                 // supersample
   const S = size * SS;
-  const pad = 0.07;             // fraction padding
-  const boltW = bx1 - bx0, boltH = by1 - by0;
-  const avail = S * (1 - 2 * pad);
-  const scale = Math.min(avail / boltW, avail / boltH);
-  const drawW = boltW * scale, drawH = boltH * scale;
-  const offX = (S - drawW) / 2, offY = (S - drawH) / 2;
-
   const hi = Buffer.alloc(S * S * 4);
   for (let py = 0; py < S; py++) {
-    // map pixel -> bolt coord
-    const by = (py - offY) / scale + by0;
-    const t = Math.min(1, Math.max(0, (by - by0) / boltH));
-    const r = Math.round(top[0] + (bot[0] - top[0]) * t);
-    const g = Math.round(top[1] + (bot[1] - top[1]) * t);
-    const b = Math.round(top[2] + (bot[2] - top[2]) * t);
+    const y = (py + 0.5) * 24 / S;
     for (let px = 0; px < S; px++) {
-      const bxc = (px - offX) / scale + bx0;
+      const x = (px + 0.5) * 24 / S;
       const idx = (py * S + px) * 4;
-      if (pointInPoly(bxc, by)) {
-        hi[idx] = r; hi[idx + 1] = g; hi[idx + 2] = b; hi[idx + 3] = 255;
+      const ring = Math.abs(Math.hypot(x - 10.25, y - 10.25) - 6.25) <= 1.125;
+      const handle = distanceToSegment(x, y, 14.8, 14.8, 19.85, 19.85) <= 1.125;
+      const isSparkle = pointInPoly(x, y, sparkle);
+      if (ring || handle || isSparkle) {
+        const color = isSparkle ? white : blue;
+        hi[idx] = color[0]; hi[idx + 1] = color[1]; hi[idx + 2] = color[2]; hi[idx + 3] = 255;
       }
     }
   }

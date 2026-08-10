@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Markdown from "./Markdown.jsx";
 import Dots from "./Dots.jsx";
 
@@ -37,6 +38,8 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   const [followUp, setFollowUp] = useState("");
   const [followUpOpen, setFollowUpOpen] = useState(false);
   const [maximized, setMaximized] = useState(false);
+  const [tabTooltip, setTabTooltip] = useState(null);
+  const tabTooltipTimerRef = useRef(null);
   const followUpInputRef = useRef(null);
   const dockRef = useRef(null);
   const bodyRef = useRef(null);
@@ -45,6 +48,27 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   const knownFrameIdsRef = useRef(new Set(frames.map((f) => String(f.id))));
   const scrollPositions = useRef({}); // frame.id -> last scrollTop in .modal-body
   const settlingRef = useRef(false); // true while a tab switch is settling
+
+  useEffect(() => () => clearTimeout(tabTooltipTimerRef.current), []);
+
+  function showTabTooltip(event, text) {
+    clearTimeout(tabTooltipTimerRef.current);
+    const tab = event.currentTarget;
+    tabTooltipTimerRef.current = setTimeout(() => {
+      const rect = tab.getBoundingClientRect();
+      const halfWidth = Math.min(180, (window.innerWidth - 24) / 2);
+      setTabTooltip({
+        text,
+        left: Math.max(12 + halfWidth, Math.min(rect.left + rect.width / 2, window.innerWidth - 12 - halfWidth)),
+        top: rect.bottom + 7,
+      });
+    }, 180);
+  }
+
+  function hideTabTooltip() {
+    clearTimeout(tabTooltipTimerRef.current);
+    setTabTooltip(null);
+  }
 
   // Record where the current tab is parked, right now. Called synchronously
   // before any navigation this component starts, because the scroll event is
@@ -213,6 +237,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   }
 
   return (
+    <>
     <div className="modal-overlay" onMouseDown={onClose}>
       <div
         className={`modal${maximized ? " maximized" : ""}`}
@@ -236,7 +261,8 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
                   className={`modal-tab${i === index ? " active" : ""}${tabStreaming ? " streaming" : ""}`}
                   ref={i === index ? activeCrumbRef : null}
                   onClick={() => goTo(i)}
-                  title={f.selectedText}
+                  onMouseEnter={(event) => showTabTooltip(event, (f.tabLabel || f.selectedText || "").trim())}
+                  onMouseLeave={hideTabTooltip}
                   role="tab"
                   aria-selected={i === index}
                   aria-busy={tabStreaming}
@@ -385,5 +411,16 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
         </div>
       </div>
     </div>
+    {tabTooltip && createPortal(
+      <div
+        className="modal-tab-tooltip"
+        role="tooltip"
+        style={{ left: tabTooltip.left, top: tabTooltip.top }}
+      >
+        {tabTooltip.text}
+      </div>,
+      document.body
+    )}
+    </>
   );
 }

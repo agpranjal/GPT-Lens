@@ -790,6 +790,29 @@ textarea:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.modal-tab-tooltip {
+  position: fixed;
+  z-index: 400;
+  width: max-content;
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 7px 9px;
+  transform: translateX(-50%);
+  background: #2b2b2b;
+  color: var(--text);
+  border: 1px solid #444;
+  border-radius: 7px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  animation: tab-tooltip-in 0.08s ease-out;
+}
+@keyframes tab-tooltip-in {
+  from { opacity: 0; transform: translate(-50%, -2px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
 .modal-tab-close {
   display: inline-flex;
   align-items: center;

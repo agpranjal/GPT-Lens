@@ -471,15 +471,23 @@ textarea:focus-visible {
 .welcome-demo-popup span {
   padding: 5px 9px;
   border-radius: 7px;
-  background: var(--surface-raised);
+  background: transparent;
   border: 0;
   color: var(--text);
   font-size: 12px;
+  font-weight: 550;
   line-height: 1;
+}
+.welcome-demo-popup span:first-child {
+  animation: welcome-action-hover 0.22s 1.12s ease-out forwards;
+}
+@keyframes welcome-action-hover {
+  to { background: var(--hover); }
 }
 @media (prefers-reduced-motion: reduce) {
   .welcome-demo mark { animation: none; background-size: 100% 100%; }
   .welcome-demo-popup { animation: none; opacity: 1; transform: translate(-50%, 0); }
+  .welcome-demo-popup span:first-child { animation: none; background: var(--hover); }
 }
 
 /* ---- starter prompts ---- */
@@ -743,7 +751,7 @@ textarea:focus-visible {
 }
 .popup-buttons button {
   min-width: 0;
-  background: var(--surface-raised);
+  background: transparent;
   color: var(--text);
   border: 0;
   border-radius: 7px;
@@ -754,18 +762,14 @@ textarea:focus-visible {
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 120ms ease, color 120ms ease,
-    box-shadow 120ms ease, transform 120ms ease;
+  transition: background-color 120ms ease, color 120ms ease;
 }
 .popup-buttons button:hover {
-  background: var(--accent-soft-hover);
-  color: var(--accent);
-  box-shadow: inset 0 0 0 1px rgba(138, 180, 248, 0.32);
-  transform: translateY(-1px);
+  background: var(--hover);
+  color: var(--text);
 }
 .popup-buttons button:active {
-  background: var(--accent-soft);
-  transform: translateY(0);
+  background: var(--active);
 }
 .popup-custom {
   display: flex;

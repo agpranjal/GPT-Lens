@@ -345,11 +345,11 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
             >
               {maximized ? (
                 <svg viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M8 3v5H3M12 17v-5h5M8 8 3.5 3.5M12 12l4.5 4.5" />
+                  <path d="M7 5V3h10v10h-2M3 7h10v10H3z" />
                 </svg>
               ) : (
                 <svg viewBox="0 0 20 20" aria-hidden="true">
-                  <path d="M8 8 3.5 3.5M3 7V3h4M12 12l4.5 4.5M13 17h4v-4" />
+                  <rect x="3" y="3" width="14" height="14" rx="1" />
                 </svg>
               )}
             </button>

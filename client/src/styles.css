@@ -710,55 +710,104 @@ textarea:focus-visible {
   z-index: 200; /* above the modal overlay (100) so it works inside the modal */
   background: var(--modal);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 11px;
   box-shadow: 0 8px 30px var(--shadow-color);
-  padding: 8px;
+  padding: 6px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  /* Hug the content: with few actions the popup stays narrow; the cap only
-     kicks in once the buttons would otherwise run too wide (then they wrap). */
-  width: fit-content;
-  max-width: min(92vw, 360px);
+  gap: 6px;
+  width: min(320px, calc(100vw - 16px));
+}
+.selection-popup::after {
+  content: "";
+  position: absolute;
+  left: var(--popup-pointer-x);
+  width: 8px;
+  height: 8px;
+  background: var(--modal);
+  border: solid var(--border);
+  transform: translateX(-50%) rotate(45deg);
+}
+.selection-popup.above::after {
+  bottom: -5px;
+  border-width: 0 1px 1px 0;
+}
+.selection-popup.below::after {
+  top: -5px;
+  border-width: 1px 0 0 1px;
 }
 .popup-buttons {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
 }
 .popup-buttons button {
-  /* Grow to share each row evenly so a wrapped row never leaves dead space on
-     the right; shrink:0 so labels are never truncated. */
-  flex: 1 0 auto;
-  background: var(--bg);
+  min-width: 0;
+  background: var(--surface-raised);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 13px;
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease,
+    box-shadow 120ms ease, transform 120ms ease;
 }
-.popup-buttons button:hover { border-color: var(--accent); }
-.popup-custom { display: flex; gap: 6px; }
+.popup-buttons button:hover {
+  background: var(--accent-soft-hover);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(138, 180, 248, 0.32);
+  transform: translateY(-1px);
+}
+.popup-buttons button:active {
+  background: var(--accent-soft);
+  transform: translateY(0);
+}
+.popup-custom {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
 .popup-custom input {
   flex: 1;
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 6px 10px;
+  border-radius: 7px;
+  padding: 6px 9px;
   font: inherit;
+  font-size: 12px;
   outline: none;
 }
+.popup-custom input:focus { border-color: var(--border-strong); }
 .popup-custom button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
   background: var(--accent);
   color: var(--accent-contrast);
   border: none;
-  border-radius: 8px;
-  padding: 6px 12px;
+  border-radius: 50%;
+  padding: 0;
   cursor: pointer;
-  font: inherit;
+}
+.popup-custom button svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .popup-custom button:disabled { opacity: 0.4; cursor: default; }
 

@@ -5,7 +5,7 @@ import { ACTIONS } from "../actions.js";
 export default function SelectionPopup({ rect, onAction }) {
   const ref = useRef(null);
   const inputRef = useRef(null);
-  const [pos, setPos] = useState({ top: 0, left: 0, ready: false });
+  const [pos, setPos] = useState({ top: 0, left: 0, pointerX: 0, placement: "above", ready: false });
   const [custom, setCustom] = useState("");
 
   // Position after mount so we know the popup's own size, and clamp to viewport.
@@ -13,14 +13,19 @@ export default function SelectionPopup({ rect, onAction }) {
     const el = ref.current;
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
+    let placement = "above";
     let top = rect.top - height - 8;
-    if (top < 8) top = rect.bottom + 8; // flip below if no room above
+    if (top < 8) {
+      top = rect.bottom + 8;
+      placement = "below";
+    }
     // Keep the popup fully on-screen even for very tall selections (e.g. a
     // whole code block), where "below" would otherwise land under the composer.
     top = Math.max(8, Math.min(top, window.innerHeight - height - 8));
     let left = rect.left + rect.width / 2 - width / 2;
     left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
-    setPos({ top, left, ready: true });
+    const pointerX = Math.max(14, Math.min(rect.left + rect.width / 2 - left, width - 14));
+    setPos({ top, left, pointerX, placement, ready: true });
   }, [rect]);
 
   // Focus the "ask your own…" box whenever the popup appears (or moves to a
@@ -44,10 +49,11 @@ export default function SelectionPopup({ rect, onAction }) {
     <div
       ref={ref}
       data-selection-popup
-      className="selection-popup"
+      className={`selection-popup ${pos.placement}`}
       style={{
         top: pos.top,
         left: pos.left,
+        "--popup-pointer-x": `${pos.pointerX}px`,
         visibility: pos.ready ? "visible" : "hidden",
       }}
     >
@@ -55,7 +61,10 @@ export default function SelectionPopup({ rect, onAction }) {
           clicked; the custom input is left free so it can receive focus. */}
       <div className="popup-buttons" onMouseDown={(e) => e.preventDefault()}>
         {ACTIONS.map((b) => (
-          <button key={b.action} onClick={() => onAction(b)}>
+          <button
+            key={b.action}
+            onClick={() => onAction(b)}
+          >
             {b.label}
           </button>
         ))}
@@ -73,8 +82,10 @@ export default function SelectionPopup({ rect, onAction }) {
           }}
           placeholder="ask your own…"
         />
-        <button type="submit" disabled={!custom.trim()}>
-          ↵
+        <button type="submit" disabled={!custom.trim()} aria-label="Submit custom action">
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M5 10h10M11 6l4 4-4 4" />
+          </svg>
         </button>
       </form>
     </div>

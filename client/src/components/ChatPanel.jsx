@@ -112,7 +112,11 @@ export default function ChatPanel({
             onKeyDown={(e) => e.key === "Escape" && setQuery("")}
           />
           {isSearching && (
-            <button className="panel-search-clear" onClick={() => { setQuery(""); inputRef.current?.focus(); }} aria-label="Clear search">✕</button>
+            <button className="panel-search-clear" onClick={() => { setQuery(""); inputRef.current?.focus(); }} aria-label="Clear search">
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="m4 4 12 12M16 4 4 16" />
+              </svg>
+            </button>
           )}
         </div>
 

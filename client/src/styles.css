@@ -141,9 +141,12 @@ textarea:focus-visible {
   font: inherit;
   font-size: 12px;
   cursor: pointer;
+  transition: background-color 0.12s ease;
 }
 .model-settings-trigger:hover,
-.model-settings-trigger[aria-expanded="true"] { border-color: var(--border-strong); }
+.model-settings-trigger[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--composer) 90%, white 10%);
+}
 .model-settings-model {
   min-width: 0;
   overflow: hidden;
@@ -1578,9 +1581,18 @@ textarea:focus-visible {
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 11px;
   cursor: pointer;
   padding: 2px 4px;
   line-height: 1;
+}
+.panel-search-clear svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .panel-search-clear:hover { color: var(--text); }

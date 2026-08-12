@@ -734,7 +734,7 @@ textarea:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  width: min(320px, calc(100vw - 16px));
+  width: min(300px, calc(100vw - 16px));
 }
 .selection-popup::after {
   content: "";
@@ -765,7 +765,7 @@ textarea:focus-visible {
   color: var(--text);
   border: 0;
   border-radius: 8px;
-  padding: 7px 8px;
+  padding: 6px 8px;
   font: inherit;
   font-size: 13px;
   font-weight: 550;
@@ -823,7 +823,7 @@ textarea:focus-visible {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.popup-custom button:disabled { opacity: 0.4; cursor: default; }
+.popup-custom button:disabled { opacity: 0.25; cursor: default; }
 
 /* ---- action modal ---- */
 .modal-overlay {

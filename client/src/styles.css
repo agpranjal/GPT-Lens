@@ -509,18 +509,14 @@ textarea:focus-visible {
   background: var(--subtle);
   font: inherit;
   cursor: pointer;
-  transition: background 0.12s, transform 0.12s;
+  transition: background 0.12s;
 }
 .welcome-starter:hover {
   border-color: transparent;
   background: var(--hover);
-  transform: translateY(-1px);
 }
 .welcome-starter-text { font-size: 12.5px; line-height: 1.35; color: var(--text); }
 .welcome-starter-arrow { color: var(--muted); font-size: 12px; flex: 0 0 auto; }
-@media (prefers-reduced-motion: reduce) {
-  .welcome-starter:hover { transform: none; }
-}
 /* one column once two cards would be too cramped to read */
 @media (max-width: 620px) {
   .welcome-starters { grid-template-columns: 1fr; }

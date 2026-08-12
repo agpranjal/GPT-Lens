@@ -574,7 +574,9 @@ textarea:focus-visible {
   z-index: 10;
   transition: background 0.12s ease, border-color 0.12s ease;
 }
-.jump-to-bottom:hover { background: var(--active); border-color: var(--accent); }
+.jump-to-bottom:hover {
+  background: color-mix(in srgb, var(--surface-raised) 90%, white 10%);
+}
 .modal-jump-to-bottom { bottom: 18px; }
 .jump-to-bottom.generating .dots {
   height: 8px;
@@ -678,9 +680,9 @@ textarea:focus-visible {
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  transition: opacity 0.15s ease, transform 0.1s ease;
+  transition: opacity 0.15s ease, filter 0.12s ease;
 }
-.composer-btn:hover:not(:disabled) { transform: scale(1.05); }
+.composer-btn:hover:not(:disabled) { filter: brightness(0.88); }
 .composer-btn:disabled { opacity: 0.35; cursor: default; }
 .composer-btn.stop {
   background: var(--danger-surface);
@@ -1146,9 +1148,9 @@ textarea:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition: filter 0.12s ease, opacity 0.15s ease;
 }
-.followup-fab:hover { transform: scale(1.07); }
+.followup-fab:hover { filter: brightness(1.08); }
 .followup-dock.open .followup-fab { opacity: 0; pointer-events: none; }
 
 /* the input pill grows leftward out of the FAB's exact position */

@@ -40,6 +40,7 @@ export default function ModelSelector({
   );
   const fixedReasoning = capability?.mandatory && adjustableLevels.length === 0;
   const selectedLevel = adjustableLevels.find((level) => level.id === reasoning);
+  const selectedLevelIndex = adjustableLevels.findIndex((level) => level.id === reasoning);
   const reasoningLabel = fixedReasoning
     ? "Always on"
     : adjustableLevels.length === 0
@@ -102,17 +103,37 @@ export default function ModelSelector({
           <div className="model-settings-field">
             <span>Reasoning</span>
             {adjustableLevels.length > 0 ? (
-              <div className="reasoning-options">
-                {adjustableLevels.map((level) => (
-                  <button
-                    type="button"
-                    key={level.id}
-                    className={level.id === reasoning ? "active" : ""}
-                    onClick={() => onReasoningChange(level.id)}
-                  >
-                    {level.label}
-                  </button>
-                ))}
+              <div
+                className="reasoning-scale"
+                style={{
+                  "--reasoning-steps": adjustableLevels.length,
+                  "--reasoning-progress": adjustableLevels.length > 1 && selectedLevelIndex >= 0
+                    ? selectedLevelIndex / (adjustableLevels.length - 1)
+                    : 0,
+                }}
+              >
+                <input
+                  type="range"
+                  min="0"
+                  max={adjustableLevels.length - 1}
+                  step="1"
+                  value={Math.max(0, selectedLevelIndex)}
+                  onChange={(event) => onReasoningChange(adjustableLevels[Number(event.target.value)].id)}
+                  aria-label="Reasoning level"
+                  aria-valuetext={reasoningLabel}
+                />
+                <div className="reasoning-scale-labels">
+                  {adjustableLevels.map((level) => (
+                    <button
+                      type="button"
+                      key={level.id}
+                      className={level.id === reasoning ? "active" : ""}
+                      onClick={() => onReasoningChange(level.id)}
+                    >
+                      {level.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : (
               <p className="reasoning-fixed">

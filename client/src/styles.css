@@ -10,7 +10,28 @@
   --text: #ececec;
   --muted: #9a9a9a;
   --border: #2e2e2e;         /* just above the surfaces so edges stay visible */
+  --border-strong: #4a4a4a;
   --accent: #8ab4f8;
+  --accent-contrast: #11243f;
+  --accent-ring: rgba(138, 180, 248, 0.09);
+  --accent-soft: rgba(138, 180, 248, 0.12);
+  --accent-soft-hover: rgba(138, 180, 248, 0.18);
+  --accent-selection: rgba(138, 180, 248, 0.4);
+  --hover: rgba(255, 255, 255, 0.06);
+  --active: rgba(255, 255, 255, 0.1);
+  --subtle: rgba(255, 255, 255, 0.035);
+  --inline-code: rgba(255, 255, 255, 0.09);
+  --danger: #ff7676;
+  --danger-surface: #c84b4b;
+  --success: #7ee787;
+  --shadow-color: rgba(0, 0, 0, 0.45);
+  --shadow-soft: rgba(0, 0, 0, 0.24);
+  --shadow-heavy: rgba(0, 0, 0, 0.65);
+  --overlay: rgba(0, 0, 0, 0.6);
+  --welcome-glow: rgba(138, 180, 248, 0.05);
+  --surface-sheen: rgba(255, 255, 255, 0.04);
+  --scrollbar: #4a4a4a;
+  --scrollbar-hover: #5a5a5a;
 
   /* semantic aliases (kept so the many rules referencing them still resolve) */
   --user-bubble: var(--surface-raised);
@@ -25,15 +46,15 @@
 /* slim, dark scrollbars everywhere */
 * {
   scrollbar-width: thin; /* Firefox */
-  scrollbar-color: #4a4a4a transparent;
+  scrollbar-color: var(--scrollbar) transparent;
 }
 *::-webkit-scrollbar { width: 8px; height: 8px; }
 *::-webkit-scrollbar-track { background: transparent; }
 *::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
+  background: var(--scrollbar);
   border-radius: 999px;
 }
-*::-webkit-scrollbar-thumb:hover { background: #5a5a5a; }
+*::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
 
 html, body, #root {
   height: 100%;
@@ -122,7 +143,7 @@ textarea:focus-visible {
   cursor: pointer;
 }
 .model-settings-trigger:hover,
-.model-settings-trigger[aria-expanded="true"] { border-color: #4a4a4a; }
+.model-settings-trigger[aria-expanded="true"] { border-color: var(--border-strong); }
 .model-settings-model {
   min-width: 0;
   overflow: hidden;
@@ -136,14 +157,14 @@ textarea:focus-visible {
   flex: 0 0 auto;
   margin-left: 2px;
   border-radius: 50%;
-  background: #666;
+  background: var(--muted);
 }
 .model-reasoning-status.on {
   background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.09);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
-.model-reasoning-status.off { background: #686868; }
-.model-reasoning-status.fixed { background: #8a8a8a; }
+.model-reasoning-status.off { background: var(--muted); opacity: 0.55; }
+.model-reasoning-status.fixed { background: var(--muted); opacity: 0.8; }
 .model-settings-reasoning {
   color: var(--muted);
   white-space: nowrap;
@@ -167,9 +188,9 @@ textarea:focus-visible {
   width: 280px;
   padding: 12px;
   background: var(--surface-raised);
-  border: 1px solid #3a3a3a;
+  border: 1px solid var(--border-strong);
   border-radius: 12px;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 14px 36px var(--shadow-color);
 }
 .model-settings-field {
   display: grid;
@@ -205,7 +226,7 @@ textarea:focus-visible {
   outline: none;
   appearance: none;
 }
-.model-settings-field select:focus { border-color: #4a4a4a; }
+.model-settings-field select:focus { border-color: var(--border-strong); }
 .model-settings-meta {
   display: flex;
   justify-content: space-between;
@@ -234,8 +255,8 @@ textarea:focus-visible {
     to right,
     var(--accent) 0%,
     var(--accent) calc(var(--reasoning-progress) * 100%),
-    #444 calc(var(--reasoning-progress) * 100%),
-    #444 100%
+    var(--border-strong) calc(var(--reasoning-progress) * 100%),
+    var(--border-strong) 100%
   );
 }
 .reasoning-scale input[type="range"]::-webkit-slider-thumb {
@@ -246,12 +267,12 @@ textarea:focus-visible {
   border: 2px solid var(--accent);
   border-radius: 50%;
   background: var(--surface-raised);
-  box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.09);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 .reasoning-scale input[type="range"]::-moz-range-track {
   height: 3px;
   border-radius: 999px;
-  background: #444;
+  background: var(--border-strong);
 }
 .reasoning-scale input[type="range"]::-moz-range-progress {
   height: 3px;
@@ -264,7 +285,7 @@ textarea:focus-visible {
   border: 2px solid var(--accent);
   border-radius: 50%;
   background: var(--surface-raised);
-  box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.09);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 .reasoning-scale-labels {
   display: grid;
@@ -309,7 +330,7 @@ textarea:focus-visible {
 /* ---- selection highlight overlay ---- */
 ::highlight(drilldown-selection) {
   color: inherit;
-  background: rgba(138, 180, 248, 0.42);
+  background: var(--accent-selection);
 }
 /* Mirrors the browser highlight while the action popup is open; stays visible
    when focus moves into the popup's input. This is the fallback for browsers
@@ -319,7 +340,7 @@ textarea:focus-visible {
 .selection-highlight-rect {
   position: fixed;
   z-index: 150;
-  background: rgba(138, 180, 248, 0.28);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
   border-radius: 2px;
   pointer-events: none;
 }
@@ -358,8 +379,8 @@ textarea:focus-visible {
 .chat-view:has(.messages.is-empty) {
   justify-content: safe center;
   background:
-    radial-gradient(circle at 50% 48%, rgba(83, 128, 205, 0.075), transparent 24%),
-    radial-gradient(circle at 50% 48%, rgba(138, 180, 248, 0.025), transparent 43%);
+    radial-gradient(circle at 50% 48%, var(--welcome-glow), transparent 28%),
+    var(--bg);
 }
 .messages.is-empty {
   flex: 0 1 auto;
@@ -390,16 +411,16 @@ textarea:focus-visible {
   justify-content: center;
   border-radius: 14px;
   background: var(--surface-raised);
-  border: 1px solid rgba(255, 255, 255, 0.055);
-  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--border);
+  box-shadow: 0 7px 20px var(--shadow-soft);
 }
 /* ---- the "here's what this app does" still ---- */
 .welcome-demo {
   position: relative;
   text-align: left;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012));
+  background: linear-gradient(180deg, var(--surface-sheen), var(--subtle));
   /* deep top padding leaves room for the popup to float above the phrase */
   padding: 44px 18px 16px;
   margin-bottom: 12px;
@@ -420,7 +441,7 @@ textarea:focus-visible {
      through beneath the blue and reads as olive */
   background-color: transparent;
   /* painted as a background image so it can be swept in from the left */
-  background-image: linear-gradient(rgba(138, 180, 248, 0.4), rgba(138, 180, 248, 0.4));
+  background-image: linear-gradient(var(--accent-selection), var(--accent-selection));
   background-repeat: no-repeat;
   background-size: 0% 100%;
   animation: welcome-sweep 0.45s 0.3s ease-out forwards;
@@ -437,8 +458,8 @@ textarea:focus-visible {
   padding: 5px;
   border-radius: 10px;
   background: var(--surface);
-  border: 1px solid rgba(255, 255, 255, 0.075);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px var(--shadow-color);
   white-space: nowrap;
   opacity: 0;
   transform: translate(-50%, 5px);
@@ -477,14 +498,14 @@ textarea:focus-visible {
   padding: 8px 11px;
   border-radius: 9px;
   border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--subtle);
   font: inherit;
   cursor: pointer;
   transition: background 0.12s, transform 0.12s;
 }
 .welcome-starter:hover {
   border-color: transparent;
-  background: rgba(255, 255, 255, 0.075);
+  background: var(--hover);
   transform: translateY(-1px);
 }
 .welcome-starter-text { font-size: 12.5px; line-height: 1.35; color: var(--text); }
@@ -541,15 +562,15 @@ textarea:focus-visible {
   height: 32px;
   padding: 0;
   border-radius: 50%;
-  border: 1px solid #414141;
-  background: #212121;
-  color: #e8e8e8;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-raised);
+  color: var(--text);
   cursor: pointer;
-  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 2px 7px var(--shadow-color);
   z-index: 10;
   transition: background 0.12s ease, border-color 0.12s ease;
 }
-.jump-to-bottom:hover { background: #2b2b2b; border-color: #555; }
+.jump-to-bottom:hover { background: var(--active); border-color: var(--accent); }
 .modal-jump-to-bottom { bottom: 18px; }
 .jump-to-bottom.generating .dots {
   height: 8px;
@@ -560,7 +581,7 @@ textarea:focus-visible {
 .jump-to-bottom.generating .dots span {
   width: 3px;
   height: 3px;
-  background: #e8e8e8;
+  background: var(--text);
   animation-name: jump-dot-bounce;
   animation-duration: 1s;
 }
@@ -597,13 +618,13 @@ textarea:focus-visible {
 }
 .message.assistant ::selection,
 .message.assistant::selection {
-  background: rgba(138, 180, 248, 0.4);
+  background: var(--accent-selection);
 }
 
 /* source: page content imported from the browser extension — a bordered
    card so it reads as "reference material", not an assistant reply. */
 .message.source {
-  border: 1px solid var(--border, #333);
+  border: 1px solid var(--border);
   border-radius: 12px;
   padding: 16px 20px;
 }
@@ -658,8 +679,8 @@ textarea:focus-visible {
 .composer-btn:hover:not(:disabled) { transform: scale(1.05); }
 .composer-btn:disabled { opacity: 0.35; cursor: default; }
 .composer-btn.stop {
-  background: #c84b4b;
-  color: #fff;
+  background: var(--danger-surface);
+  color: var(--text);
 }
 
 /* ---- bouncing dots (waiting for the model) ---- */
@@ -690,7 +711,7 @@ textarea:focus-visible {
   background: var(--modal);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 8px 30px var(--shadow-color);
   padding: 8px;
   display: flex;
   flex-direction: column;
@@ -732,7 +753,7 @@ textarea:focus-visible {
 }
 .popup-custom button {
   background: var(--accent);
-  color: #11243f;
+  color: var(--accent-contrast);
   border: none;
   border-radius: 8px;
   padding: 6px 12px;
@@ -746,7 +767,7 @@ textarea:focus-visible {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -762,7 +783,7 @@ textarea:focus-visible {
   display: flex;
   flex-direction: column;
   overflow: hidden; /* clip children to the rounded corners */
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);
+  box-shadow: 0 24px 70px var(--shadow-heavy);
   animation: modal-in 0.18s ease-out;
   transform-origin: center;
   transition: width 0.15s ease-out, max-height 0.15s ease-out;
@@ -837,7 +858,7 @@ textarea:focus-visible {
   padding: 6px 10px;
   border: 1px solid transparent;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--subtle);
   color: var(--muted);
   cursor: pointer;
   font-size: 13px;
@@ -845,9 +866,9 @@ textarea:focus-visible {
   user-select: none;
   transition: background 0.12s ease, color 0.12s ease;
 }
-.modal-tab:hover { background: rgba(255, 255, 255, 0.07); color: var(--text); }
+.modal-tab:hover { background: var(--hover); color: var(--text); }
 .modal-tab.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--active);
   border-color: var(--border);
   color: var(--text);
   box-shadow: inset 0 -2px 0 var(--accent);
@@ -890,11 +911,11 @@ textarea:focus-visible {
   max-width: min(300px, calc(100vw - 16px));
   padding: 3px 5px;
   transform: translateX(-50%);
-  background: #333;
-  color: #f1f1f1;
-  border: 1px solid #666;
+  background: var(--surface-raised);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
   border-radius: 4px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 5px var(--shadow-color);
   font: 11px/1.25 Arial, sans-serif;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -929,7 +950,7 @@ textarea:focus-visible {
 .modal-tab-close:hover,
 .modal-tab-close:focus,
 .modal-tab-close:focus-visible {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--active);
   color: var(--text);
   opacity: 1;
   outline: none;
@@ -966,7 +987,7 @@ textarea:focus-visible {
    so bump it up to read as the same visual size as the close button */
 .modal-maximize { font-size: 20px; }
 .modal-close:hover,
-.modal-maximize:hover { color: var(--text); background: rgba(255, 255, 255, 0.06); }
+.modal-maximize:hover { color: var(--text); background: var(--hover); }
 
 /* content area: fixed meta block on top, scrolling body below */
 .modal-content {
@@ -993,7 +1014,7 @@ textarea:focus-visible {
 .modal-snippet {
   margin: 0;
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--subtle);
   border-left: 3px solid var(--accent);
   border-radius: 0 8px 8px 0;
   color: var(--muted);
@@ -1020,7 +1041,7 @@ textarea:focus-visible {
 }
 .modal-body::-webkit-scrollbar { display: none; } /* WebKit */
 .modal-body .muted { color: var(--muted); font-style: italic; }
-.modal-body .error { color: #ff7676; }
+.modal-body .error { color: var(--danger); }
 
 /* follow-up thread: continues the current lens's answer, persists per-lens.
    Each turn gets its own card so a stack of follow-ups reads as distinct
@@ -1028,7 +1049,7 @@ textarea:focus-visible {
 .followup {
   margin-top: 20px;
   padding: 16px 18px;
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--subtle);
   border: 1px solid var(--border);
   border-radius: 12px;
 }
@@ -1056,12 +1077,12 @@ textarea:focus-visible {
   height: 40px;
   border-radius: 50%;
   background: var(--accent);
-  color: #11243f;
+  color: var(--accent-contrast);
   border: none;
   font-size: 17px;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 4px 14px var(--shadow-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1086,7 +1107,7 @@ textarea:focus-visible {
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 5px 5px 5px 14px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px var(--shadow-color);
   transition: width 0.2s ease, opacity 0.15s ease;
 }
 .followup-dock.open .modal-followup {
@@ -1113,7 +1134,7 @@ textarea:focus-visible {
 .modal-followup button {
   flex-shrink: 0;
   background: var(--accent);
-  color: #11243f;
+  color: var(--accent-contrast);
   border: none;
   border-radius: 999px;
   padding: 7px 14px;
@@ -1153,7 +1174,7 @@ textarea:focus-visible {
   color: var(--muted);
 }
 .markdown code {
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--inline-code);
   padding: 1px 6px;
   border-radius: 5px;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -1231,7 +1252,7 @@ textarea:focus-visible {
   justify-content: center;
   width: 26px;
   height: 26px;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--hover);
   color: var(--muted);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -1245,8 +1266,8 @@ textarea:focus-visible {
 .codeblock-select:hover { color: var(--text); border-color: var(--accent); }
 .codeblock-copy.copied {
   opacity: 1;
-  color: #7ee787;
-  border-color: #7ee787;
+  color: var(--success);
+  border-color: var(--success);
 }
 .table-scroll {
   max-width: 100%;
@@ -1296,7 +1317,7 @@ textarea:focus-visible {
 .side-panel.right { border-left: 1px solid var(--border); }
 /* collapsed: a slim vertical strip that keeps the panel's edge visible */
 .side-panel.collapsed { width: 44px; }
-.side-panel.collapsed:hover { background: #313131; }
+.side-panel.collapsed:hover { background: var(--surface-raised); }
 @media (prefers-reduced-motion: reduce) {
   .side-panel { transition: none; }
 }
@@ -1401,12 +1422,12 @@ textarea:focus-visible {
 }
 /* Hover must never look like active (same border color would make an
    idle-but-hovered row indistinguishable from the actually-open chat). */
-.panel-item:hover { background: rgba(255, 255, 255, 0.06); }
+.panel-item:hover { background: var(--hover); }
 .panel-item.active {
   border-color: var(--accent);
-  background: rgba(138, 180, 248, 0.12);
+  background: var(--accent-soft);
 }
-.panel-item.active:hover { background: rgba(138, 180, 248, 0.18); }
+.panel-item.active:hover { background: var(--accent-soft-hover); }
 .panel-item-text { min-width: 0; flex: 1; }
 .panel-item-title {
   font-size: 13px;
@@ -1435,7 +1456,7 @@ textarea:focus-visible {
   opacity: 0;
 }
 .panel-item:hover .panel-item-del { opacity: 1; }
-.panel-item-del:hover { color: #ff7676; background: rgba(255, 255, 255, 0.06); }
+.panel-item-del:hover { color: var(--danger); background: var(--hover); }
 
 /* search bar inside the chats panel */
 .panel-search-wrap {

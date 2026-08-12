@@ -69,21 +69,22 @@ body {
   font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
-/* Controls never show a browser focus ring anywhere in the app. A clicked
-   button silently keeps focus, and any later keypress (arrow keys, Enter)
-   upgrades that to a visible :focus-visible ring — which reads as a stray
-   highlight left behind. Our own hover/active styles carry the affordance;
-   text inputs keep their intentional focused-border styles (border-color
-   rules are unaffected by outline). */
+/* Mouse clicks stay visually quiet. Keyboard navigation gets a restrained
+   inner ring that does not change control size or spill into nearby content. */
 button:focus,
-button:focus-visible,
 [role="tab"]:focus,
-[role="tab"]:focus-visible,
 input:focus,
-input:focus-visible,
-textarea:focus,
-textarea:focus-visible {
+textarea:focus {
   outline: none;
+}
+button:focus-visible,
+[role="tab"]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[tabindex]:not([tabindex="-1"]):focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 65%, transparent);
 }
 
 .app {
@@ -984,7 +985,9 @@ textarea:focus-visible {
   border: 1px solid var(--border-strong);
   border-radius: 4px;
   box-shadow: 0 2px 5px var(--shadow-color);
-  font: 11px/1.25 Arial, sans-serif;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.25;
   white-space: normal;
   overflow-wrap: anywhere;
   pointer-events: none;
@@ -1007,22 +1010,27 @@ textarea:focus-visible {
   border-radius: 4px;
   background: none;
   color: var(--muted);
-  font-size: 10px;
   line-height: 1;
   cursor: pointer;
   opacity: 0.55;
   user-select: none;
   transition: background 0.12s ease, opacity 0.12s ease, color 0.12s ease;
 }
+.modal-tab-close svg {
+  width: 11px;
+  height: 11px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .modal-tab:hover .modal-tab-close { opacity: 0.85; }
 .modal-tab-close:hover,
-.modal-tab-close:focus,
-.modal-tab-close:focus-visible {
+.modal-tab-close:focus {
   background: var(--active);
   color: var(--text);
   opacity: 1;
-  outline: none;
-  box-shadow: none;
 }
 .modal-close,
 .modal-maximize {
@@ -1054,13 +1062,6 @@ textarea:focus-visible {
   stroke-width: 1.7;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-.modal-close:focus,
-.modal-close:focus-visible,
-.modal-maximize:focus,
-.modal-maximize:focus-visible {
-  outline: none;
-  box-shadow: none;
 }
 .modal-maximize:hover { color: var(--text); background: var(--hover); }
 .modal-close:hover {

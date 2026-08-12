@@ -312,7 +312,9 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
                       title="Close tab (⌘X)"
                       aria-label="Close tab"
                     >
-                      ✕
+                      <svg viewBox="0 0 20 20" aria-hidden="true">
+                        <path d="m4 4 12 12M16 4 4 16" />
+                      </svg>
                     </button>
                   )}
                 </div>

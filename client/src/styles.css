@@ -136,7 +136,7 @@ textarea:focus-visible {
   background: var(--composer);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 9px;
+  border-radius: 8px;
   padding: 0 13px 0 10px;
   font: inherit;
   font-size: 12px;
@@ -456,7 +456,7 @@ textarea:focus-visible {
   display: flex;
   gap: 4px;
   padding: 5px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: 0 8px 24px var(--shadow-color);
@@ -470,7 +470,7 @@ textarea:focus-visible {
 }
 .welcome-demo-popup span {
   padding: 5px 9px;
-  border-radius: 7px;
+  border-radius: 8px;
   background: transparent;
   border: 0;
   color: var(--text);
@@ -504,7 +504,7 @@ textarea:focus-visible {
   gap: 12px;
   text-align: left;
   padding: 8px 11px;
-  border-radius: 9px;
+  border-radius: 8px;
   border: 1px solid transparent;
   background: var(--subtle);
   font: inherit;
@@ -718,7 +718,7 @@ textarea:focus-visible {
   z-index: 200; /* above the modal overlay (100) so it works inside the modal */
   background: var(--modal);
   border: 1px solid var(--border);
-  border-radius: 11px;
+  border-radius: 12px;
   box-shadow: 0 8px 30px var(--shadow-color);
   padding: 6px;
   display: flex;
@@ -754,7 +754,7 @@ textarea:focus-visible {
   background: transparent;
   color: var(--text);
   border: 0;
-  border-radius: 7px;
+  border-radius: 8px;
   padding: 7px 8px;
   font: inherit;
   font-size: 12px;
@@ -783,7 +783,7 @@ textarea:focus-visible {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 7px;
+  border-radius: 8px;
   padding: 6px 9px;
   font: inherit;
   font-size: 12px;
@@ -1480,7 +1480,7 @@ textarea:focus-visible {
   gap: 8px;
   padding: 9px 10px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
   background: transparent;
 }

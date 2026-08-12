@@ -1479,16 +1479,15 @@ textarea:focus-visible {
   align-items: center;
   gap: 8px;
   padding: 9px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   border-radius: 10px;
   cursor: pointer;
-  background: var(--user-bubble);
+  background: transparent;
 }
 /* Hover must never look like active (same border color would make an
    idle-but-hovered row indistinguishable from the actually-open chat). */
 .panel-item:hover { background: var(--hover); }
 .panel-item.active {
-  border-color: var(--accent);
   background: var(--accent-soft);
 }
 .panel-item.active:hover { background: var(--accent-soft-hover); }

@@ -37,6 +37,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   const anyStreaming = streaming || followUpStreaming;
   const [followUp, setFollowUp] = useState("");
   const [followUpOpen, setFollowUpOpen] = useState(false);
+  const [awayFromBottom, setAwayFromBottom] = useState(false);
   const [maximized, setMaximized] = useState(false);
   const [tabTooltip, setTabTooltip] = useState(null);
   const tabTooltipTimerRef = useRef(null);
@@ -48,6 +49,20 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   const knownFrameIdsRef = useRef(new Set(frames.map((f) => String(f.id))));
   const scrollPositions = useRef({}); // frame.id -> last scrollTop in .modal-body
   const settlingRef = useRef(false); // true while a tab switch is settling
+  const stickToFollowUpRef = useRef(false);
+
+  function modalDistanceFromBottom() {
+    const body = bodyRef.current;
+    return body ? body.scrollHeight - body.scrollTop - body.clientHeight : 0;
+  }
+
+  function scrollModalToBottom() {
+    const body = bodyRef.current;
+    if (!body) return;
+    stickToFollowUpRef.current = true;
+    body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
+    setAwayFromBottom(false);
+  }
 
   useEffect(() => () => clearTimeout(tabTooltipTimerRef.current), []);
 
@@ -108,6 +123,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     const outer = requestAnimationFrame(() => {
       inner = requestAnimationFrame(() => {
         settlingRef.current = false;
+        setAwayFromBottom(modalDistanceFromBottom() > 80);
       });
     });
     return () => {
@@ -164,11 +180,25 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   useEffect(() => {
     setFollowUp("");
     setFollowUpOpen(false);
+    stickToFollowUpRef.current = false;
   }, [frame.id, frame.activeKey]);
 
   useEffect(() => {
     if (followUpOpen) followUpInputRef.current?.focus();
   }, [followUpOpen]);
+
+  const latestFollowUp = current.followUps?.[current.followUps.length - 1];
+  useLayoutEffect(() => {
+    if (!stickToFollowUpRef.current || !latestFollowUp) return;
+    const body = bodyRef.current;
+    if (!body) return;
+    body.scrollTop = body.scrollHeight;
+    scrollPositions.current[frame.id] = body.scrollTop;
+    setAwayFromBottom(false);
+    if (latestFollowUp.status === "done" || latestFollowUp.status === "error") {
+      stickToFollowUpRef.current = false;
+    }
+  }, [frame.id, latestFollowUp?.status, latestFollowUp?.answer]);
 
   // Escape closes the follow-up box if open, else the modal; "/" opens the
   // follow-up box; ←/→ move between frames (unless typing in an input).
@@ -219,6 +249,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     e.preventDefault();
     const text = followUp.trim();
     if (!text || anyStreaming) return;
+    stickToFollowUpRef.current = true;
     onAskFollowUp(text);
     setFollowUp("");
     closeFollowUp();
@@ -344,7 +375,14 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
             onScroll={(e) => {
               if (settlingRef.current) return; // echo of the switch, not the reader
               scrollPositions.current[frame.id] = e.currentTarget.scrollTop;
+              const distance = modalDistanceFromBottom();
+              setAwayFromBottom(distance > 80);
+              if (distance > 40) stickToFollowUpRef.current = false;
             }}
+            onWheel={(e) => {
+              if (e.deltaY < 0) stickToFollowUpRef.current = false;
+            }}
+            onTouchMove={() => { stickToFollowUpRef.current = false; }}
           >
             {current.status === "loading" && <Dots />}
             {current.status === "error" && (
@@ -368,6 +406,24 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
               </>
             )}
           </div>
+
+          {awayFromBottom && (
+            <button
+              type="button"
+              className={`jump-to-bottom modal-jump-to-bottom${anyStreaming ? " generating" : ""}`}
+              onClick={scrollModalToBottom}
+              title={anyStreaming ? "Follow generation" : "Jump to latest"}
+              aria-label={anyStreaming ? "Follow generation" : "Jump to latest"}
+            >
+              {anyStreaming ? (
+                <Dots />
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 5v14M6.5 13.5 12 19l5.5-5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+          )}
 
           <div ref={dockRef} className={`followup-dock${followUpOpen ? " open" : ""}`}>
               <button

@@ -3,10 +3,10 @@
 // mock answer with a phrase highlighted and the real action popup floating
 // above it, played once on mount.
 const STARTERS = [
-  { tag: "Networking", text: "Explain how HTTPS actually works, end to end" },
-  { tag: "Databases", text: "What is a database index, and when does it hurt?" },
-  { tag: "React", text: "Walk me through how React decides to re-render" },
-  { tag: "JavaScript", text: "Explain event loops like I've never seen one" },
+  "How does HTTPS actually work?",
+  "When do database indexes hurt?",
+  "How does React decide to re-render?",
+  "Explain the JavaScript event loop",
 ];
 
 // The labels here mirror actions.js — kept short so the mock popup stays
@@ -37,30 +37,24 @@ export default function Welcome({ onSend }) {
           moves onto the call stack the moment it sits empty, and runs there
           until it returns.
         </p>
-        <p className="welcome-demo-caption">
-          Highlight any part of an answer to explain it, get an example, or go
-          deeper — each one opens in its own tab, so you never lose your place.
-        </p>
       </div>
 
       <div className="welcome-starters">
-        {STARTERS.map((s) => (
+        {STARTERS.map((text) => (
           <button
-            key={s.text}
+            key={text}
             type="button"
             className="welcome-starter"
-            onClick={() => onSend(s.text)}
+            onClick={() => onSend(text)}
           >
-            <span className="welcome-starter-tag">{s.tag}</span>
-            <span className="welcome-starter-text">{s.text}</span>
+            <span className="welcome-starter-text">{text}</span>
+            <span className="welcome-starter-arrow" aria-hidden="true">↗</span>
           </button>
         ))}
       </div>
 
       <p className="welcome-hint">
         <kbd>/</kbd> jump to the message box
-        <span className="welcome-hint-sep">·</span>
-        <kbd>⌘⇧O</kbd> new chat
       </p>
     </div>
   );

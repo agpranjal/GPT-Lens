@@ -283,30 +283,39 @@ textarea:focus-visible {
    `safe` drops the centring rather than clipping once it no longer fits — and
    in a browser that doesn't know the keyword the declaration is ignored, which
    leaves the content top-aligned and still fully reachable. */
-.messages.is-empty { justify-content: safe center; padding-block: 16px; }
+.chat-view:has(.messages.is-empty) { justify-content: safe center; }
+.messages.is-empty {
+  flex: 0 1 auto;
+  overflow: visible;
+  padding: 16px 20px 10px;
+}
+.chat-view:has(.messages.is-empty) .composer {
+  width: min(100%, 600px);
+  margin: 0 auto;
+  padding-bottom: 12px;
+}
 .welcome {
   color: var(--muted);
   text-align: center;
   width: 100%;
-  max-width: 560px;
+  max-width: 600px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
 /* brand mark: the app's accent frames the lens without overpowering it */
 .welcome-mark {
-  width: 46px;
-  height: 46px;
-  margin: 0 auto 24px;
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 20px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 14px;
   background: var(--surface-raised);
   border: 1px solid var(--border);
-  box-shadow: 0 0 0 5px rgba(138, 180, 248, 0.035), 0 10px 28px rgba(80, 130, 220, 0.08);
+  box-shadow: 0 7px 20px rgba(0, 0, 0, 0.24);
 }
-
 /* ---- the "here's what this app does" still ---- */
 .welcome-demo {
   position: relative;
@@ -315,11 +324,11 @@ textarea:focus-visible {
   border-radius: 14px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012));
   /* deep top padding leaves room for the popup to float above the phrase */
-  padding: 46px 18px 14px;
-  margin-bottom: 18px;
+  padding: 44px 18px 16px;
+  margin-bottom: 12px;
 }
 .welcome-demo-text {
-  margin: 0 0 12px;
+  margin: 0;
   font-size: 14.5px;
   line-height: 1.65;
   color: var(--text);
@@ -370,14 +379,6 @@ textarea:focus-visible {
   font-size: 12px;
   line-height: 1;
 }
-.welcome-demo-caption {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--muted);
-  padding-top: 11px;
-  border-top: 1px solid var(--border);
-}
 @media (prefers-reduced-motion: reduce) {
   .welcome-demo mark { animation: none; background-size: 100% 100%; }
   .welcome-demo-popup { animation: none; opacity: 1; transform: translate(-50%, 0); }
@@ -387,17 +388,17 @@ textarea:focus-visible {
 .welcome-starters {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 6px;
+  margin-bottom: 10px;
 }
 .welcome-starter {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 5px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   text-align: left;
-  padding: 11px 14px;
-  border-radius: 12px;
+  padding: 8px 11px;
+  border-radius: 9px;
   border: 1px solid var(--border);
   background: var(--surface);
   font: inherit;
@@ -409,15 +410,8 @@ textarea:focus-visible {
   background: var(--surface-raised);
   transform: translateY(-1px);
 }
-.welcome-starter-tag {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--accent);
-  opacity: 0.8;
-}
-.welcome-starter-text { font-size: 13.5px; line-height: 1.45; color: var(--text); }
+.welcome-starter-text { font-size: 12.5px; line-height: 1.35; color: var(--text); }
+.welcome-starter-arrow { color: var(--muted); font-size: 12px; flex: 0 0 auto; }
 @media (prefers-reduced-motion: reduce) {
   .welcome-starter:hover { transform: none; }
 }
@@ -428,7 +422,7 @@ textarea:focus-visible {
 
 .welcome-hint {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   opacity: 0.7;
   display: flex;
   align-items: center;

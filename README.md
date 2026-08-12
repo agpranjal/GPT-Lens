@@ -1,155 +1,195 @@
 # GPT Lens
 
-GPT Lens is a streaming, multi-model AI chat app built for understanding answers in depth. Highlight any text in a response, choose a lens such as **Explain**, **Example**, **Go Deeper**, **Step by Step**, or ask a custom question. GPT Lens streams the result into a focused modal where you can keep drilling down into nested tabs without losing your place.
+GPT Lens is an AI chat app designed for learning and exploring answers in depth.
+
+Its main feature is simple: highlight any part of an AI response, then ask GPT Lens to explain it, give an example, show code, break it into steps, or go deeper. The new explanation opens separately, so you can explore without losing your original conversation.
 
 ![GPT Lens home screen](docs/screenshots/gpt-lens-home.jpg)
 
-## What makes it different
+## What you can do
 
-- **Selection-driven exploration** — highlight part of any answer and act on exactly that text.
-- **Nested drill-down tabs** — branch repeatedly from explanations while preserving the ancestor context.
-- **Independent follow-up threads** — each lens keeps its own conversation history and variants.
-- **Streaming responses** — chat, drill-downs, and follow-ups render as tokens arrive.
-- **Multi-model support** — choose from a curated OpenRouter model list and four reasoning levels.
-- **Persistent local history** — chats, messages, modal sessions, and model preferences live in SQLite.
-- **Markdown tooling** — syntax highlighting plus copy and select controls for code blocks.
-- **Browser extension** — send the page you are reading into GPT Lens as source material.
+- Chat with a choice of AI models through OpenRouter.
+- Highlight a sentence or paragraph and choose **Explain**, **Example**, **Go Deeper**, **Step by Step**, **Code**, or **What?**
+- Write your own instruction for selected text.
+- Highlight text inside an explanation to keep drilling down.
+- Move between earlier explanations without losing your place.
+- Ask follow-up questions inside an explanation.
+- Save chats and drill-down sessions automatically on your computer.
+- Render Markdown, tables, and syntax-highlighted code.
+- Optionally import a webpage or supported AI conversation with the Chrome extension.
 
 ![GPT Lens drill-down modal](docs/screenshots/gpt-lens-drilldown.jpg)
 
-## How the drill-down flow works
+## Before you start
 
-1. Ask a question in the main chat.
-2. Highlight any useful or unclear part of the response.
-3. Pick a preset action or enter a custom instruction.
-4. Read the streamed answer in its own modal tab.
-5. Select text inside that answer to branch into another tab.
-6. Return to any earlier tab without losing its content, follow-ups, or scroll position.
+You need:
 
-Tabs show a pulsing indicator while their response is still loading. Newly created background tabs automatically scroll into view, and the selected source text remains highlighted while the action popup is open.
+1. **Node.js 20 or newer.** Download the LTS version from [nodejs.org](https://nodejs.org/) if it is not already installed.
+2. **An OpenRouter account and API key.** Create one at [openrouter.ai](https://openrouter.ai/). OpenRouter may charge for model usage depending on the model you select.
+3. **A copy of this repository** on your computer.
 
-## Stack
+To check whether Node.js is installed, open Terminal (macOS/Linux) or PowerShell (Windows) and run:
 
-| Layer | Technology |
-|---|---|
-| Client | React 18, Vite, React Markdown |
-| Server | Node.js, Express |
-| LLM gateway | OpenRouter through the OpenAI-compatible SDK |
-| Persistence | SQLite with `better-sqlite3` |
-| Extension | Chrome Manifest V3, Vite library builds |
+```bash
+node --version
+```
 
-## Quick start
+If the displayed version starts with `v20` or a higher number, you are ready.
 
-Requirements:
+## Install GPT Lens
 
-- Node.js 20 or newer
-- An [OpenRouter](https://openrouter.ai/) API key
-
-Install every workspace dependency:
+Open a terminal in the GPT Lens folder, then run:
 
 ```bash
 npm run install:all
 ```
 
-Create the server environment file:
+This installs the app, server, and optional browser-extension packages. It may take a few minutes the first time.
+
+## Add your OpenRouter API key
+
+GPT Lens needs your key to send requests to the selected AI model.
+
+### macOS or Linux
 
 ```bash
 cp server/.env.example server/.env
 ```
 
-Set `OPENROUTER_API_KEY` in `server/.env`, then start the client and server:
+### Windows PowerShell
+
+```powershell
+Copy-Item server/.env.example server/.env
+```
+
+Open `server/.env` in a text editor. Find this line:
+
+```dotenv
+OPENROUTER_API_KEY=your_key_here
+```
+
+Replace `your_key_here` with your OpenRouter key, then save the file:
+
+```dotenv
+OPENROUTER_API_KEY=sk-or-v1-your-real-key
+```
+
+Do not share this file or commit it to Git. The repository is already configured to ignore it.
+
+## Start the app
+
+Run:
 
 ```bash
 npm run dev
 ```
 
-- Client: [http://localhost:5173](http://localhost:5173)
-- Server: [http://localhost:3001](http://localhost:3001)
-- Health check: [http://localhost:3001/api/health](http://localhost:3001/api/health)
+Keep that terminal window open while using GPT Lens. When both parts of the app are ready, open:
 
-Vite proxies `/api/*` requests to the Express server during development.
+[http://localhost:5173](http://localhost:5173)
 
-## Configuration
+To stop GPT Lens, return to the terminal and press `Ctrl+C`.
 
-```dotenv
-OPENROUTER_API_KEY=       # required
-OPENROUTER_MODEL=         # default: openai/gpt-oss-120b
-OPENROUTER_MAX_TOKENS=    # default: 8192
-OPENROUTER_REASONING=     # off | low | medium | high (default: high)
-OPENROUTER_BASE_URL=      # default: https://openrouter.ai/api/v1
-EXTRA_CONTEXT=            # true | false (default: true)
-PORT=                     # default: 3001
-```
+## How to use GPT Lens
 
-Model and reasoning selections are validated server-side and stored app-wide in SQLite. The environment values seed the settings record on a fresh database. After that, changes made through the header selectors are persisted through `/api/settings`.
+1. Type a question into the message box and press Enter.
+2. Wait for the response to finish, or read it while it streams.
+3. Highlight text you want to understand better.
+4. Choose an action from the popup, or type your own instruction.
+5. Read the explanation in the drill-down window.
+6. Highlight text inside that explanation to create another drill-down tab.
+7. Use the saved chats on the left and saved sessions on the right to revisit earlier work.
 
-Set `EXTRA_CONTEXT=false` to send only the immediate parent context for modal actions. Keeping it enabled gives nested drill-downs the full main conversation and ancestor chain, at the cost of additional input tokens.
+The model and reasoning controls are in the top-right corner. More capable models may produce better answers but can cost more or respond more slowly. Prices shown in the app are OpenRouter estimates per million input and output tokens.
 
-## Available commands
+## Optional Chrome extension
 
-```bash
-npm run dev              # server and client
-npm run dev:server       # Express server only, port 3001
-npm run dev:client       # Vite client only, port 5173
-npm run build:extension  # build the Chrome extension into extension/dist
-```
+The extension can send the page you are viewing into GPT Lens as source material. GPT Lens must already be running at `http://localhost:5173`.
 
-The repository currently has no automated test or lint scripts. Use the client production build for a frontend compilation check:
-
-```bash
-npm --prefix client run build
-```
-
-## Browser extension
-
-Build the extension:
+First build the extension:
 
 ```bash
 npm run build:extension
 ```
 
-Then open `chrome://extensions`, enable **Developer mode**, choose **Load unpacked**, and select `extension/dist`.
+Then install it in Chrome:
 
-The extension currently targets the local app at `http://localhost:5173`. Clicking its toolbar icon extracts the active page, opens or focuses GPT Lens, and imports the page as source content.
+1. Open `chrome://extensions`.
+2. Turn on **Developer mode** in the top-right corner.
+3. Click **Load unpacked**.
+4. Select the `extension/dist` folder inside this repository.
+5. Pin GPT Lens from Chrome's Extensions menu if you want easy access.
 
-## Architecture
+Open a webpage and click the GPT Lens extension icon. The extension will open or focus the local app and import supported page content.
 
-```text
-client (React/Vite)
-  ├─ main chat and streaming UI
-  ├─ text-selection popup
-  ├─ nested modal session tree
-  └─ chat/session side panels
-          │ /api/*
-          ▼
-server (Express)
-  ├─ prompt and ancestor-context construction
-  ├─ model/reasoning validation
-  ├─ OpenRouter streaming
-  └─ SQLite persistence
-          │
-          ▼
-server/data/gpt-lens.db
+## Where your data goes
+
+- Your OpenRouter API key stays in the local server environment file and is not sent to the browser.
+- Chats, messages, saved sessions, and app settings are stored locally in `server/data/gpt-lens.db`.
+- Your prompts and the context needed for an answer are sent to OpenRouter and the model you select.
+- Deleting `server/data/gpt-lens.db` removes locally saved GPT Lens history and settings. Only do this while the app is stopped and only if you are comfortable losing that data.
+
+## Common problems
+
+### `npm` or `node` is not recognized
+
+Install the current Node.js LTS release from [nodejs.org](https://nodejs.org/), close and reopen your terminal, then try again.
+
+### The app opens but responses fail
+
+Check that:
+
+- `server/.env` exists.
+- `OPENROUTER_API_KEY` contains your real key, with no quotes or extra spaces.
+- Your OpenRouter account has access or credit for the selected model.
+- The terminal running GPT Lens does not show an error.
+
+After changing `server/.env`, stop the app with `Ctrl+C` and run `npm run dev` again.
+
+### Port 5173 or 3001 is already in use
+
+Another copy of GPT Lens—or another development app—may already be running. Close the other terminal process and restart GPT Lens.
+
+### The browser extension does nothing
+
+Make sure:
+
+- GPT Lens is running at `http://localhost:5173`.
+- You selected `extension/dist`, not the `extension` source folder.
+- You rebuilt and reloaded the extension after changing its source files.
+- The current page allows extension access. Chrome internal pages such as `chrome://settings` cannot be imported.
+
+### I changed the default model, but the app still uses my previous choice
+
+The model selected in the app is saved locally. Use the model menu in the top-right corner to change it. Environment defaults mainly apply when the local database is first created.
+
+## Optional advanced settings
+
+Most users only need to set `OPENROUTER_API_KEY`. The remaining values in `server/.env` can usually stay unchanged.
+
+```dotenv
+PORT=3001
+OPENROUTER_MODEL=openai/gpt-oss-120b
+OPENROUTER_MAX_TOKENS=8192
+OPENROUTER_REASONING=high
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+EXTRA_CONTEXT=true
 ```
 
-The primary streaming endpoints are:
+- `PORT` changes the local server port.
+- `OPENROUTER_MODEL` selects the initial model for a fresh database.
+- `OPENROUTER_MAX_TOKENS` limits the maximum generated response length.
+- `OPENROUTER_REASONING` selects the initial reasoning level.
+- `OPENROUTER_BASE_URL` changes the compatible API endpoint.
+- `EXTRA_CONTEXT=true` gives drill-down requests the main conversation and their ancestor explanations. This usually improves continuity but can use more input tokens.
 
-- `POST /api/chat` — streams a multi-turn main-chat response.
-- `POST /api/action` — streams a selection-driven response with chat and ancestor context.
+## Useful commands
 
-SQLite stores normalized chats and messages, whole modal-session trees as JSON, and a singleton app-settings row. The database is created automatically and is gitignored.
-
-## Project structure
-
-```text
-client/       React application
-server/       Express API, OpenRouter integration, SQLite persistence
-extension/    Chrome extension source and build configuration
-docs/         README screenshots and project documentation assets
+```bash
+npm run dev              # start GPT Lens
+npm run dev:server       # start only the local server
+npm run dev:client       # start only the web interface
+npm run build:extension  # rebuild the Chrome extension
 ```
 
-## Data and privacy
-
-- The OpenRouter API key stays on the server and is never sent to the browser.
-- Conversation and session history is stored locally in `server/data/gpt-lens.db`.
-- Prompts and selected context are sent to the configured OpenRouter model when generating a response.
+GPT Lens is currently intended to run locally on a desktop computer.

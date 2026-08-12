@@ -442,7 +442,9 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
                 title="Ask a follow-up (/)"
                 aria-label="Ask a follow-up"
               >
-                💬
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M16.5 12.5a2 2 0 0 1-2 2H8l-4.5 3v-11a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2z" />
+                </svg>
               </button>
               <form className="modal-followup" onSubmit={submitFollowUp}>
                 <input

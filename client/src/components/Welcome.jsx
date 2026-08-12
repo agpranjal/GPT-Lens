@@ -48,7 +48,9 @@ export default function Welcome({ onSend }) {
             onClick={() => onSend(text)}
           >
             <span className="welcome-starter-text">{text}</span>
-            <span className="welcome-starter-arrow" aria-hidden="true">↗</span>
+            <svg className="welcome-starter-arrow" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M6 14 14 6M8 6h6v6" />
+            </svg>
           </button>
         ))}
       </div>

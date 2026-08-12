@@ -4,7 +4,7 @@ GPT Lens is an AI chat app designed for learning and exploring answers in depth.
 
 Its main feature is simple: highlight any part of an AI response, then ask GPT Lens to explain it, give an example, show code, break it into steps, or go deeper. The new explanation opens separately, so you can explore without losing your original conversation.
 
-![GPT Lens home screen](docs/screenshots/gpt-lens-home.jpg)
+![GPT Lens welcome screen with starter prompts and selection actions](docs/screenshots/gpt-lens-home.jpg)
 
 ## What you can do
 
@@ -15,10 +15,11 @@ Its main feature is simple: highlight any part of an AI response, then ask GPT L
 - Move between earlier explanations without losing your place.
 - Ask follow-up questions inside an explanation.
 - Save chats and drill-down sessions automatically on your computer.
+- Search saved chats by title or message content.
 - Render Markdown, tables, and syntax-highlighted code.
 - Optionally import a webpage or supported AI conversation with the Chrome extension.
 
-![GPT Lens drill-down modal](docs/screenshots/gpt-lens-drilldown.jpg)
+![GPT Lens drill-down modal showing a contextual explanation](docs/screenshots/gpt-lens-drilldown.jpg)
 
 ## Before you start
 
@@ -100,7 +101,7 @@ To stop GPT Lens, return to the terminal and press `Ctrl+C`.
 6. Highlight text inside that explanation to create another drill-down tab.
 7. Use the saved chats on the left and saved sessions on the right to revisit earlier work.
 
-The model and reasoning controls are in the top-right corner. More capable models may produce better answers but can cost more or respond more slowly. Prices shown in the app are OpenRouter estimates per million input and output tokens.
+The model and reasoning controls are in the top-right corner. The model picker groups the curated choices by capability and shows current OpenRouter pricing when that metadata is available. Reasoning choices automatically match the selected model's supported effort levels. More capable models may produce better answers but can cost more or respond more slowly.
 
 ## Optional Chrome extension
 
@@ -179,7 +180,7 @@ EXTRA_CONTEXT=true
 - `PORT` changes the local server port.
 - `OPENROUTER_MODEL` selects the initial model for a fresh database.
 - `OPENROUTER_MAX_TOKENS` limits the maximum generated response length.
-- `OPENROUTER_REASONING` selects the initial reasoning level.
+- `OPENROUTER_REASONING` selects the initial reasoning level: `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, or `max`.
 - `OPENROUTER_BASE_URL` changes the compatible API endpoint.
 - `EXTRA_CONTEXT=true` gives drill-down requests the main conversation and their ancestor explanations. This usually improves continuity but can use more input tokens.
 

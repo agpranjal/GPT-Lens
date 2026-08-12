@@ -73,7 +73,9 @@ export default function SessionPanel({
                   title="Delete"
                   aria-label="Delete session"
                 >
-                  ✕
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="m4 4 12 12M16 4 4 16" />
+                  </svg>
                 </button>
               </div>
             ))

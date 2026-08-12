@@ -1508,15 +1508,28 @@ textarea:focus-visible {
   margin-top: 2px;
 }
 .panel-item-del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  width: 22px;
+  height: 22px;
   background: none;
   border: none;
   color: var(--muted);
-  font-size: 12px;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 0;
   border-radius: 6px;
   opacity: 0;
+}
+.panel-item-del svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .panel-item:hover .panel-item-del { opacity: 1; }
 .panel-item-del:hover { color: var(--danger); background: var(--hover); }

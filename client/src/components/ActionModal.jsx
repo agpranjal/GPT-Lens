@@ -341,13 +341,22 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
                 setMaximized((m) => !m);
                 e.currentTarget.blur();
               }}
-              title={maximized ? "Restore" : "Maximize"}
               aria-label={maximized ? "Restore" : "Maximize"}
             >
-              {maximized ? "⤡" : "⤢"}
+              {maximized ? (
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M8 3v5H3M12 17v-5h5M8 8 3.5 3.5M12 12l4.5 4.5" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M8 8 3.5 3.5M3 7V3h4M12 12l4.5 4.5M13 17h4v-4" />
+                </svg>
+              )}
             </button>
             <button className="modal-close" onClick={onClose} aria-label="Close">
-              ✕
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <path d="m4 4 12 12M16 4 4 16" />
+              </svg>
             </button>
           </div>
         </header>

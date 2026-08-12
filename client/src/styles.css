@@ -958,6 +958,7 @@ textarea:focus-visible {
 }
 .modal-close,
 .modal-maximize {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -974,6 +975,17 @@ textarea:focus-visible {
   user-select: none;
   /* never show a focus ring/highlight boundary on these icon buttons */
   outline: none;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.modal-close svg,
+.modal-maximize svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .modal-close:focus,
 .modal-close:focus-visible,
@@ -982,12 +994,11 @@ textarea:focus-visible {
   outline: none;
   box-shadow: none;
 }
-.modal-close { font-size: 16px; }
-/* the maximize/restore arrow glyph renders narrower than ✕ at the same size,
-   so bump it up to read as the same visual size as the close button */
-.modal-maximize { font-size: 20px; }
-.modal-close:hover,
 .modal-maximize:hover { color: var(--text); background: var(--hover); }
+.modal-close:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
 
 /* content area: fixed meta block on top, scrolling body below */
 .modal-content {

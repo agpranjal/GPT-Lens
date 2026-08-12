@@ -878,7 +878,7 @@ textarea:focus-visible {
 .modal-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   flex-shrink: 0;
 }
 /* only mounted while a stream is running, so it can't be mistaken for a
@@ -887,20 +887,25 @@ textarea:focus-visible {
 .modal-stop {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-raised);
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
   color: var(--muted);
-  font: inherit;
-  font-size: 12px;
-  line-height: 1;
   cursor: pointer;
-  white-space: nowrap;
-  transition: color 0.12s, border-color 0.12s;
+  transition: color 0.12s ease, background 0.12s ease;
 }
-.modal-stop:hover { color: var(--text); border-color: var(--accent); }
+.modal-stop svg {
+  width: 13px;
+  height: 13px;
+}
+.modal-stop:hover {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
 /* breadcrumb trail rendered as browser-style tabs */
 .modal-tabs {
   display: flex;

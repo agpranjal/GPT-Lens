@@ -16,6 +16,24 @@ Server uses `node --watch index.js` (no nodemon needed). Client uses Vite with H
 
 There are no test or lint scripts.
 
+## UI Design System (Required)
+
+All future UI work must preserve the app's established desktop visual language. Treat design consistency as a requirement for every frontend change, including small controls and interaction states.
+
+- Keep controls quiet at rest; prefer transparent or existing neutral surfaces over permanent emphasis.
+- Use neutral gray background/color changes for hover and focus feedback. Avoid borders, motion, or accent colors unless they communicate real state.
+- Reserve blue for meaningful selections, active states, and primary actions. Reserve red for destructive or stop actions.
+- Keep compact UI text around 13px and main conversation/composer text at 16px. Use smaller text only for clearly secondary metadata.
+- Reuse the rounded line-style SVG icon language. Do not introduce emoji or font glyphs for interface icons when an SVG is appropriate.
+- Use the existing radius hierarchy: approximately 8px for compact controls, 12px for popups/cards, 16px for major modals, and pills/circles only where already established.
+- Minimize permanent borders. Use borders for structure or input boundaries, not to box every clickable item.
+- Keep compact controls stationary on hover. Do not add lift, bounce, or scale effects without a functional reason.
+- Preserve existing spacing, hierarchy, and component proportions unless a specific observed problem requires changing them.
+- Match new controls to the nearest existing component pattern instead of inventing a one-off treatment.
+- Provide visible but restrained keyboard focus feedback without stacking multiple focus effects on inputs.
+- When changing UI, inspect the rendered desktop state and verify relevant hover, active, focus, loading, disabled, and error states. Do not declare the design consistent based only on source code or a successful build.
+- Do not perform speculative micro-tweaks. Make visual changes only for a concrete usability or consistency issue.
+
 ## Architecture
 
 **What it is:** A streaming chat app with a selection-driven "drill-down" layer. Users highlight text in any message, pick an action, and a response streams into a modal. Those modals can be nested (drill-down sessions), and each session maintains its own conversation thread.

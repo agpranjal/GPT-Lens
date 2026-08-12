@@ -1283,7 +1283,7 @@ button:focus-visible,
 .markdown pre code.hljs { background: transparent; padding: 0; }
 
 /* code block wrapper: one continuous surface — the language label and the code
-   share the same background, no boxed header, no divider (matches Claude) */
+   share the same background, with no boxed header or divider */
 .codeblock {
   /* top margin gives breathing room between the preceding text and the block;
      it collapses with a preceding paragraph's margin in normal flow, but adds

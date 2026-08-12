@@ -45,6 +45,14 @@ export default function ModelSelector({
     : adjustableLevels.length === 0
       ? "Fixed"
       : selectedLevel?.label || "Choose";
+  const reasoningState = reasoning === "off"
+    ? "off"
+    : fixedReasoning
+      ? "on"
+      : adjustableLevels.length > 0
+        ? "on"
+        : "fixed";
+  const triggerLabel = `${selected?.label || "Model"} — Reasoning: ${reasoningLabel}`;
 
   return (
     <div className="model-selector" ref={rootRef}>
@@ -54,9 +62,11 @@ export default function ModelSelector({
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls="model-settings-panel"
+        aria-label={triggerLabel}
+        title={`${triggerLabel}${selected?.price ? ` — ${selected.price}` : ""}`}
       >
         <span className="model-settings-model">{selected?.label}</span>
-        <span className="model-settings-divider" aria-hidden="true">·</span>
+        <span className={`model-reasoning-status ${reasoningState}`} aria-hidden="true" />
         <span className="model-settings-reasoning">{reasoningLabel}</span>
         <span className="model-settings-chevron" aria-hidden="true" />
       </button>

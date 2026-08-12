@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Message from "./Message.jsx";
 import Welcome from "./Welcome.jsx";
+import Dots from "./Dots.jsx";
 
 export default function ChatView({ messages, loading, onSend, onStop, focusToken }) {
   const [input, setInput] = useState("");
@@ -103,12 +104,18 @@ export default function ChatView({ messages, loading, onSend, onStop, focusToken
       {awayFromBottom && (
         <button
           type="button"
-          className="jump-to-bottom"
+          className={`jump-to-bottom${loading ? " generating" : ""}`}
           onClick={scrollToBottom}
-          title="Jump to latest"
-          aria-label="Jump to latest"
+          title={loading ? "Follow generation" : "Jump to latest"}
+          aria-label={loading ? "Follow generation" : "Jump to latest"}
         >
-          ↓
+          {loading ? (
+            <Dots />
+          ) : (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 5v14M6.5 13.5 12 19l5.5-5.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
         </button>
       )}
       <form className="composer" onSubmit={submit}>

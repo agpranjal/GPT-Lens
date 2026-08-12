@@ -130,8 +130,25 @@ textarea:focus-visible {
   white-space: nowrap;
   font-weight: 550;
 }
-.model-settings-divider { color: #666; }
-.model-settings-reasoning { color: var(--muted); white-space: nowrap; }
+.model-reasoning-status {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: #666;
+}
+.model-reasoning-status.on {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(138, 180, 248, 0.09);
+}
+.model-reasoning-status.off { background: #686868; }
+.model-reasoning-status.fixed { background: #8a8a8a; }
+.model-settings-reasoning {
+  color: var(--muted);
+  white-space: nowrap;
+  font-size: 11.5px;
+}
 .model-settings-chevron {
   width: 7px;
   height: 7px;
@@ -283,7 +300,12 @@ textarea:focus-visible {
    `safe` drops the centring rather than clipping once it no longer fits — and
    in a browser that doesn't know the keyword the declaration is ignored, which
    leaves the content top-aligned and still fully reachable. */
-.chat-view:has(.messages.is-empty) { justify-content: safe center; }
+.chat-view:has(.messages.is-empty) {
+  justify-content: safe center;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(83, 128, 205, 0.075), transparent 24%),
+    radial-gradient(circle at 50% 48%, rgba(138, 180, 248, 0.025), transparent 43%);
+}
 .messages.is-empty {
   flex: 0 1 auto;
   overflow: visible;
@@ -313,14 +335,14 @@ textarea:focus-visible {
   justify-content: center;
   border-radius: 14px;
   background: var(--surface-raised);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.055);
   box-shadow: 0 7px 20px rgba(0, 0, 0, 0.24);
 }
 /* ---- the "here's what this app does" still ---- */
 .welcome-demo {
   position: relative;
   text-align: left;
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 14px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012));
   /* deep top padding leaves room for the popup to float above the phrase */
@@ -360,7 +382,7 @@ textarea:focus-visible {
   padding: 5px;
   border-radius: 10px;
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(255, 255, 255, 0.075);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
   opacity: 0;
@@ -374,7 +396,7 @@ textarea:focus-visible {
   padding: 5px 9px;
   border-radius: 7px;
   background: var(--surface-raised);
-  border: 1px solid var(--border);
+  border: 0;
   color: var(--text);
   font-size: 12px;
   line-height: 1;
@@ -399,15 +421,15 @@ textarea:focus-visible {
   text-align: left;
   padding: 8px 11px;
   border-radius: 9px;
-  border: 1px solid var(--border);
-  background: var(--surface);
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.035);
   font: inherit;
   cursor: pointer;
-  transition: border-color 0.12s, background 0.12s, transform 0.12s;
+  transition: background 0.12s, transform 0.12s;
 }
 .welcome-starter:hover {
-  border-color: var(--accent);
-  background: var(--surface-raised);
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.075);
   transform: translateY(-1px);
 }
 .welcome-starter-text { font-size: 12.5px; line-height: 1.35; color: var(--text); }
@@ -457,18 +479,39 @@ textarea:focus-visible {
   bottom: 96px;
   left: 50%;
   transform: translateX(-50%);
-  width: 36px;
-  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border-radius: 50%;
-  border: 1px solid var(--border);
-  background: var(--composer);
-  color: var(--text);
-  font-size: 16px;
+  border: 1px solid #414141;
+  background: #212121;
+  color: #e8e8e8;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.42);
   z-index: 10;
+  transition: background 0.12s ease, border-color 0.12s ease;
 }
-.jump-to-bottom:hover { border-color: var(--accent); }
+.jump-to-bottom:hover { background: #2b2b2b; border-color: #555; }
+.jump-to-bottom.generating .dots {
+  height: 8px;
+  margin: 0;
+  gap: 2.5px;
+  align-items: center;
+}
+.jump-to-bottom.generating .dots span {
+  width: 3px;
+  height: 3px;
+  background: #e8e8e8;
+  animation-name: jump-dot-bounce;
+  animation-duration: 1s;
+}
+@keyframes jump-dot-bounce {
+  0%, 70%, 100% { transform: translateY(1.5px); opacity: 0.42; }
+  35% { transform: translateY(-1.5px); opacity: 1; }
+}
 
 /* messages are centered in a fixed-width column, like ChatGPT */
 .message {

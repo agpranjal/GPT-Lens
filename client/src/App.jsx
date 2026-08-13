@@ -153,6 +153,61 @@ export default function App() {
     return () => CSS.highlights.delete("drilldown-selection");
   }, [selection]);
 
+  // A DOM Range's client rect is viewport-relative and changes as its scroll
+  // container moves. Keep the popup and fallback highlight anchored to the
+  // live range instead of leaving them at the coordinates captured on mouseup.
+  useEffect(() => {
+    let frame = null;
+
+    function refreshSelectionGeometry() {
+      frame = null;
+      setSelection((current) => {
+        const range = current?.highlightRange;
+        if (!range) return current;
+
+        const common = range.commonAncestorContainer;
+        const anchorEl = common.nodeType === 3 ? common.parentElement : common;
+        if (!anchorEl?.isConnected) return null;
+
+        const clipEl = current.origin === "modal"
+          ? anchorEl.closest?.("[data-modal-body]")
+          : anchorEl.closest?.(".messages");
+        const rawRect = range.getBoundingClientRect();
+        const rect = clipRectToEl(rawRect, clipEl);
+
+        // Keep the range alive while it is off-screen. The popup temporarily
+        // disappears because there is no visible anchor, then returns in the
+        // correct place when the user scrolls back to the selected text.
+        if (!rect) {
+          return {
+            ...current,
+            rect: null,
+            highlightRects: [],
+          };
+        }
+
+        const rawHighlightRects = dropHeaderRects(
+          Array.from(range.getClientRects())
+        );
+        return {
+          ...current,
+          rect,
+          highlightRects: clipRectsToEl(rawHighlightRects, clipEl),
+        };
+      });
+    }
+
+    function onScroll() {
+      if (frame == null) frame = requestAnimationFrame(refreshSelectionGeometry);
+    }
+
+    document.addEventListener("scroll", onScroll, true);
+    return () => {
+      document.removeEventListener("scroll", onScroll, true);
+      if (frame != null) cancelAnimationFrame(frame);
+    };
+  }, []);
+
   // Bumped whenever the composer should grab focus (new chat, chat open, "/").
   const [focusToken, setFocusToken] = useState(0);
   const focusComposer = useCallback(() => setFocusToken((t) => t + 1), []);
@@ -1002,7 +1057,9 @@ export default function App() {
               ))}
             </div>
           )}
-          <SelectionPopup rect={selection.rect} onAction={handleAction} />
+          {selection.rect && (
+            <SelectionPopup rect={selection.rect} onAction={handleAction} />
+          )}
         </>
       )}
       {activeSession && (

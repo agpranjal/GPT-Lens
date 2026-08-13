@@ -394,6 +394,7 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
             }}
             onTouchMove={() => { stickToFollowUpRef.current = false; }}
           >
+            <div className="selection-popup-layer" data-selection-layer />
             {current.status === "loading" && <Dots />}
             {current.status === "error" && (
               <div className="error">⚠️ {current.error}</div>

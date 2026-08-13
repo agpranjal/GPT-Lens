@@ -723,9 +723,18 @@ button:focus-visible,
 }
 
 /* ---- selection popup ---- */
+.selection-popup-layer {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 0;
+  z-index: 200;
+  pointer-events: none;
+  user-select: none;
+}
 .selection-popup {
   position: absolute;
-  z-index: 200; /* above the modal overlay (100) so it works inside the modal */
+  pointer-events: auto;
+  user-select: none;
   background: var(--modal);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -789,6 +798,7 @@ button:focus-visible,
   border-top: 1px solid var(--border);
 }
 .popup-custom input {
+  user-select: text;
   flex: 1;
   background: var(--bg);
   color: var(--text);

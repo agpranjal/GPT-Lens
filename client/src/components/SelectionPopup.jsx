@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import { ACTIONS } from "../actions.js";
 
 // Floating toolbar anchored above the current selection rect.
-export default function SelectionPopup({ rect, range, container, onAction }) {
+export default function SelectionPopup({ rect, range, container, portalTarget, onAction }) {
   const ref = useRef(null);
   const inputRef = useRef(null);
   const [pos, setPos] = useState({ top: 0, left: 0, pointerX: 0, placement: "above", ready: false });
@@ -101,6 +101,6 @@ export default function SelectionPopup({ rect, range, container, onAction }) {
         </button>
       </form>
     </div>,
-    container
+    portalTarget
   );
 }

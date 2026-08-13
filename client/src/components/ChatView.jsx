@@ -91,6 +91,7 @@ export default function ChatView({ messages, loading, onSend, onStop, focusToken
         ref={listRef}
         onScroll={onScroll}
       >
+        <div className="selection-popup-layer" data-selection-layer />
         {messages.length === 0 && <Welcome onSend={onSend} />}
         {messages.map((m, i) => (
           <Message

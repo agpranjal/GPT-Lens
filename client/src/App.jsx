@@ -363,6 +363,7 @@ export default function App() {
             highlightRange: range.cloneRange(),
             highlightRects,
             container: modalBody,
+            portalTarget: modalBody.querySelector(":scope > [data-selection-layer]"),
             origin: "modal",
           });
         }
@@ -392,6 +393,7 @@ export default function App() {
         highlightRange: range.cloneRange(),
         highlightRects,
         container: messagesEl,
+        portalTarget: messagesEl.querySelector(":scope > [data-selection-layer]"),
         origin: "chat",
       });
     }
@@ -1045,11 +1047,12 @@ export default function App() {
               ))}
             </div>
           )}
-          {selection.rect && selection.container?.isConnected && (
+          {selection.rect && selection.container?.isConnected && selection.portalTarget?.isConnected && (
             <SelectionPopup
               rect={selection.rect}
               range={selection.highlightRange}
               container={selection.container}
+              portalTarget={selection.portalTarget}
               onAction={handleAction}
             />
           )}

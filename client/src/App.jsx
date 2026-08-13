@@ -94,8 +94,25 @@ const clipRectToEl = (r, clipEl) => {
   if (right <= left || bottom <= top) return null;
   return { top, left, width: right - left, height: bottom - top, bottom };
 };
-const clipRectsToEl = (rects, clipEl) =>
-  rects.map((r) => clipRectToEl(r, clipEl)).filter(Boolean);
+// Ignore one-pixel/partial line remnants at a viewport edge. A Range's
+// bounding box can still intersect the scroller after the selected glyphs are
+// effectively gone, which otherwise leaves the popup pinned to that edge.
+const visibleSelectionRects = (rects, clipEl) =>
+  rects
+    .map((r) => ({ raw: r, clipped: clipRectToEl(r, clipEl) }))
+    .filter(({ raw, clipped }) =>
+      clipped && clipped.height >= Math.min(8, raw.height * 0.5)
+    )
+    .map(({ clipped }) => clipped);
+
+const boundsForRects = (rects) => {
+  if (!rects.length) return null;
+  const top = Math.min(...rects.map((r) => r.top));
+  const left = Math.min(...rects.map((r) => r.left));
+  const right = Math.max(...rects.map((r) => r.left + r.width));
+  const bottom = Math.max(...rects.map((r) => r.bottom));
+  return { top, left, right, bottom, width: right - left, height: bottom - top };
+};
 
 // Drop selection client-rects that land on a code-block header row. A
 // triple-click on the heading above a block selects that paragraph, and the
@@ -152,61 +169,6 @@ export default function App() {
     }
     return () => CSS.highlights.delete("drilldown-selection");
   }, [selection]);
-
-  // A DOM Range's client rect is viewport-relative and changes as its scroll
-  // container moves. Keep the popup and fallback highlight anchored to the
-  // live range instead of leaving them at the coordinates captured on mouseup.
-  useEffect(() => {
-    let frame = null;
-
-    function refreshSelectionGeometry() {
-      frame = null;
-      setSelection((current) => {
-        const range = current?.highlightRange;
-        if (!range) return current;
-
-        const common = range.commonAncestorContainer;
-        const anchorEl = common.nodeType === 3 ? common.parentElement : common;
-        if (!anchorEl?.isConnected) return null;
-
-        const clipEl = current.origin === "modal"
-          ? anchorEl.closest?.("[data-modal-body]")
-          : anchorEl.closest?.(".messages");
-        const rawRect = range.getBoundingClientRect();
-        const rect = clipRectToEl(rawRect, clipEl);
-
-        // Keep the range alive while it is off-screen. The popup temporarily
-        // disappears because there is no visible anchor, then returns in the
-        // correct place when the user scrolls back to the selected text.
-        if (!rect) {
-          return {
-            ...current,
-            rect: null,
-            highlightRects: [],
-          };
-        }
-
-        const rawHighlightRects = dropHeaderRects(
-          Array.from(range.getClientRects())
-        );
-        return {
-          ...current,
-          rect,
-          highlightRects: clipRectsToEl(rawHighlightRects, clipEl),
-        };
-      });
-    }
-
-    function onScroll() {
-      if (frame == null) frame = requestAnimationFrame(refreshSelectionGeometry);
-    }
-
-    document.addEventListener("scroll", onScroll, true);
-    return () => {
-      document.removeEventListener("scroll", onScroll, true);
-      if (frame != null) cancelAnimationFrame(frame);
-    };
-  }, []);
 
   // Bumped whenever the composer should grab focus (new chat, chat open, "/").
   const [focusToken, setFocusToken] = useState(0);
@@ -332,15 +294,31 @@ export default function App() {
 
   // Detect a text selection inside an assistant message OR the modal body.
   useEffect(() => {
+    let draggingScrollbar = false;
+
+    function isScrollbarPress(e) {
+      const scroller = e.target.closest?.(".messages, [data-modal-body]");
+      if (!scroller || scroller.scrollHeight <= scroller.clientHeight) return false;
+      const box = scroller.getBoundingClientRect();
+      return e.clientX >= box.right - 16 && e.clientX <= box.right &&
+        e.clientY >= box.top && e.clientY <= box.bottom;
+    }
+
     // Any press outside the popup dismisses it immediately — don't wait for
     // mouseup to notice the selection is gone.
     function onMouseDown(e) {
       if (e.target.closest?.("[data-selection-popup]")) return;
+      draggingScrollbar = isScrollbarPress(e);
+      if (draggingScrollbar) return;
       setSelection(null);
     }
 
     function onMouseUp(e) {
       if (e.target.closest?.("[data-selection-popup]")) return;
+      if (draggingScrollbar) {
+        draggingScrollbar = false;
+        return;
+      }
       // Defer one tick: clicking ON highlighted text collapses the selection
       // only AFTER mouseup fires, so reading it synchronously here would still
       // see the old selection and resurrect the popup we just dismissed.
@@ -357,7 +335,6 @@ export default function App() {
       const anchorEl =
         sel.anchorNode?.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
       const range = sel.getRangeAt(0);
-      const rawRect = range.getBoundingClientRect();
       // Per-line rects for our own highlight overlay — the native highlight
       // stops being painted once focus moves into the popup's input.
       const rawHighlightRects = dropHeaderRects(
@@ -373,12 +350,19 @@ export default function App() {
           const v = frame.variants[frame.activeKey];
           // Clip to the scroll container so a tall selection (e.g. selecting a
           // whole code block) doesn't paint highlight blocks outside the modal.
+          const highlightRects = visibleSelectionRects(rawHighlightRects, modalBody);
+          const rect = boundsForRects(highlightRects);
+          // A scrollbar mouseup can leave the browser's native selection
+          // intact after its range has moved off-screen. Never resurrect a
+          // popup without a visible range to anchor it to.
+          if (!rect) return;
           setSelection({
             selectedText: text,
             sourceMessageText: v?.text || "",
-            rect: clipRectToEl(rawRect, modalBody) || rawRect,
+            rect,
             highlightRange: range.cloneRange(),
-            highlightRects: clipRectsToEl(rawHighlightRects, modalBody),
+            highlightRects,
+            container: modalBody,
             origin: "modal",
           });
         }
@@ -398,12 +382,16 @@ export default function App() {
         return;
       }
       const messagesEl = msgEl.closest(".messages");
+      const highlightRects = visibleSelectionRects(rawHighlightRects, messagesEl);
+      const rect = boundsForRects(highlightRects);
+      if (!rect) return;
       setSelection({
         selectedText: text,
         sourceMessageText: source.content,
-        rect: clipRectToEl(rawRect, messagesEl) || rawRect,
+        rect,
         highlightRange: range.cloneRange(),
-        highlightRects: clipRectsToEl(rawHighlightRects, messagesEl),
+        highlightRects,
+        container: messagesEl,
         origin: "chat",
       });
     }
@@ -1057,8 +1045,13 @@ export default function App() {
               ))}
             </div>
           )}
-          {selection.rect && (
-            <SelectionPopup rect={selection.rect} onAction={handleAction} />
+          {selection.rect && selection.container?.isConnected && (
+            <SelectionPopup
+              rect={selection.rect}
+              range={selection.highlightRange}
+              container={selection.container}
+              onAction={handleAction}
+            />
           )}
         </>
       )}

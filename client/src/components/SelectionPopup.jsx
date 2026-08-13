@@ -1,32 +1,44 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ACTIONS } from "../actions.js";
 
 // Floating toolbar anchored above the current selection rect.
-export default function SelectionPopup({ rect, onAction }) {
+export default function SelectionPopup({ rect, range, container, onAction }) {
   const ref = useRef(null);
   const inputRef = useRef(null);
   const [pos, setPos] = useState({ top: 0, left: 0, pointerX: 0, placement: "above", ready: false });
   const [custom, setCustom] = useState("");
 
-  // Position after mount so we know the popup's own size, and clamp to viewport.
+  // Position in the scroll container's content coordinates. The popup then
+  // scrolls and clips with the selected text without any scroll-event JS.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
-    let placement = "above";
-    let top = rect.top - height - 8;
-    if (top < 8) {
-      top = rect.bottom + 8;
-      placement = "below";
+
+    function position() {
+      const anchor = range?.getBoundingClientRect() || rect;
+      const { width, height } = el.getBoundingClientRect();
+      const clip = container.getBoundingClientRect();
+      let placement = "above";
+      let viewportTop = anchor.top - height - 8;
+      if (viewportTop < clip.top + 8) {
+        viewportTop = anchor.bottom + 8;
+        placement = "below";
+      }
+      viewportTop = Math.max(clip.top + 8, Math.min(viewportTop, clip.bottom - height - 8));
+      let viewportLeft = anchor.left + anchor.width / 2 - width / 2;
+      viewportLeft = Math.max(clip.left + 8, Math.min(viewportLeft, clip.right - width - 8));
+      const top = viewportTop - clip.top + container.scrollTop;
+      const left = viewportLeft - clip.left + container.scrollLeft;
+      const pointerX = Math.max(14, Math.min(anchor.left + anchor.width / 2 - viewportLeft, width - 14));
+      setPos({ top, left, pointerX, placement, ready: true });
     }
-    // Keep the popup fully on-screen even for very tall selections (e.g. a
-    // whole code block), where "below" would otherwise land under the composer.
-    top = Math.max(8, Math.min(top, window.innerHeight - height - 8));
-    let left = rect.left + rect.width / 2 - width / 2;
-    left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
-    const pointerX = Math.max(14, Math.min(rect.left + rect.width / 2 - left, width - 14));
-    setPos({ top, left, pointerX, placement, ready: true });
-  }, [rect]);
+
+    position();
+    const observer = new ResizeObserver(position);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [rect, range, container]);
 
   // Focus the "ask your own…" box whenever the popup appears (or moves to a
   // new selection). Runs off `pos` — the input is unfocusable while the popup
@@ -45,7 +57,7 @@ export default function SelectionPopup({ rect, onAction }) {
     onAction({ action: "custom", custom: text, label: text });
   }
 
-  return (
+  return createPortal(
     <div
       ref={ref}
       data-selection-popup
@@ -88,6 +100,7 @@ export default function SelectionPopup({ rect, onAction }) {
           </svg>
         </button>
       </form>
-    </div>
+    </div>,
+    container
   );
 }

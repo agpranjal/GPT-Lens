@@ -357,6 +357,7 @@ button:focus-visible,
 }
 
 .messages {
+  position: relative;
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain; /* chat overscroll never moves the app shell */
@@ -723,7 +724,7 @@ button:focus-visible,
 
 /* ---- selection popup ---- */
 .selection-popup {
-  position: fixed;
+  position: absolute;
   z-index: 200; /* above the modal overlay (100) so it works inside the modal */
   background: var(--modal);
   border: 1px solid var(--border);
@@ -1106,6 +1107,7 @@ button:focus-visible,
 .modal-snippet::-webkit-scrollbar { display: none; } /* WebKit */
 
 .modal-body {
+  position: relative;
   padding: 18px 22px 24px;
   overflow-y: auto;
   overscroll-behavior: contain; /* don't chain scrolls to the page behind */

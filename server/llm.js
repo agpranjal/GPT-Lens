@@ -40,6 +40,9 @@ const ACTION_SYSTEM = [
   "When using a table, emit VALID GitHub-flavored Markdown only: NEVER put HTML tags such as '<br>' in cells, and put substantial code in a fenced code block outside the table.",
 ].join(" ");
 
+const CONCISE_INSTRUCTION =
+  "Give a simple, short, fully correct answer.";
+
 // Strips <think>...</think> reasoning spans from a streamed text sequence,
 // handling tags that straddle chunk boundaries. Use one instance per response:
 // call push(chunk) for each streamed chunk, then flush() once at the end.
@@ -128,5 +131,8 @@ export async function chatStream(messages, opts, { system = CHAT_SYSTEM } = {}) 
 }
 
 export function actionStream(messages, opts) {
-  return chatStream(messages, opts, { system: ACTION_SYSTEM });
+  const system = opts?.concise
+    ? `${ACTION_SYSTEM} ${CONCISE_INSTRUCTION}`
+    : ACTION_SYSTEM;
+  return chatStream(messages, opts, { system });
 }

@@ -245,12 +245,12 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose, goTo, onCloseFrame, index, frames.length, followUpOpen]);
 
-  function submitFollowUp(e) {
+  function submitFollowUp(e, concise = false) {
     e.preventDefault();
     const text = followUp.trim();
     if (!text || anyStreaming) return;
     stickToFollowUpRef.current = true;
-    onAskFollowUp(text);
+    onAskFollowUp(text, { concise });
     setFollowUp("");
     closeFollowUp();
   }
@@ -258,11 +258,11 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
   // Cmd/Ctrl+Enter (or Cmd/Ctrl+click Send) from the follow-up box asks it as
   // a fresh lens in a NEW tab instead of appending to the current one — same
   // snippet, but its own thread, for when the follow-up is really a tangent.
-  function askFollowUpAsNewTab() {
+  function askFollowUpAsNewTab(concise = false) {
     const text = followUp.trim();
     if (!text || anyStreaming) return;
     rememberScroll(); // this tab is about to be left for the new one
-    onVariant({ custom: text, label: text });
+    onVariant({ custom: text, label: text, concise });
     setFollowUp("");
     closeFollowUp();
   }
@@ -456,7 +456,9 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
                   onKeyDown={(e) => {
                     if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
                       e.preventDefault();
-                      askFollowUpAsNewTab();
+                      askFollowUpAsNewTab(e.shiftKey);
+                    } else if (e.shiftKey && e.key === "Enter") {
+                      submitFollowUp(e, true);
                     }
                   }}
                   placeholder="Ask a follow-up… (⌘⏎ for a new tab)"
@@ -468,10 +470,12 @@ export default function ActionModal({ modal, onClose, onNavigate, onVariant, onA
                   onClick={(e) => {
                     if (e.metaKey || e.ctrlKey) {
                       e.preventDefault();
-                      askFollowUpAsNewTab();
+                      askFollowUpAsNewTab(e.shiftKey);
+                    } else if (e.shiftKey) {
+                      submitFollowUp(e, true);
                     }
                   }}
-                  title="Send (⌘+click for a new tab)"
+                  title="Shift for concise · ⌘+click for a new tab"
                 >
                   Send
                 </button>

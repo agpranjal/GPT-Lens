@@ -824,6 +824,7 @@ export default function App() {
         ancestorHistory,
         history,
         question: payload.custom,
+        concise: payload.concise,
       });
     },
     [streamIntoVariant]
@@ -860,7 +861,7 @@ export default function App() {
   // the lens's own answer plus every completed follow-up — so the model
   // remembers what was already said.
   const handleAskFollowUp = useCallback(
-    async (text) => {
+    async (text, { concise = false } = {}) => {
       const sessionId = activeIdRef.current;
       const s = sessionsRef.current.find((x) => x.id === sessionId);
       if (!s) return;
@@ -909,6 +910,7 @@ export default function App() {
             ancestorHistory,
             history,
             question: text,
+            concise,
           },
           llmOptsRef.current,
           (chunk) =>

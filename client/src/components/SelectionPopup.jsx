@@ -50,11 +50,11 @@ export default function SelectionPopup({ rect, range, container, portalTarget, o
 
   useEffect(() => setCustom(""), [rect]);
 
-  function submitCustom(e) {
+  function submitCustom(e, concise = false) {
     e.preventDefault();
     const text = custom.trim();
     if (!text) return;
-    onAction({ action: "custom", custom: text, label: text });
+    onAction({ action: "custom", custom: text, label: text, concise });
   }
 
   return createPortal(
@@ -75,7 +75,8 @@ export default function SelectionPopup({ rect, range, container, portalTarget, o
         {ACTIONS.map((b) => (
           <button
             key={b.action}
-            onClick={() => onAction(b)}
+            onClick={(e) => onAction({ ...b, concise: e.shiftKey })}
+            title="Shift+click for a concise answer"
           >
             {b.label}
           </button>
@@ -86,6 +87,9 @@ export default function SelectionPopup({ rect, range, container, portalTarget, o
           ref={inputRef}
           value={custom}
           onChange={(e) => setCustom(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && e.shiftKey) submitCustom(e, true);
+          }}
           onMouseDown={(e) => {
             // Don't let the click collapse the page selection; focus manually
             // so the highlighted text stays visible while you type.
@@ -94,7 +98,15 @@ export default function SelectionPopup({ rect, range, container, portalTarget, o
           }}
           placeholder="ask your own…"
         />
-        <button type="submit" disabled={!custom.trim()} aria-label="Submit custom action">
+        <button
+          type="submit"
+          disabled={!custom.trim()}
+          aria-label="Submit custom action"
+          title="Shift+Enter or Shift+click for a concise answer"
+          onClick={(e) => {
+            if (e.shiftKey) submitCustom(e, true);
+          }}
+        >
           <svg viewBox="0 0 20 20" aria-hidden="true">
             <path d="M5 10h10M11 6l4 4-4 4" />
           </svg>

@@ -32,15 +32,15 @@ import {
   updateSettings,
 } from "./db.js";
 
-// Pull { model, reasoning } out of a request body, validating each against
-// the allowlist. Invalid/missing values fall through to the server default.
+// Pull per-request model options out of the request body. Model/reasoning are
+// validated against their allowlists; concise is enabled only by literal true.
 function resolveOpts(body) {
   const settings = getSettings(DEFAULT_MODEL, DEFAULT_REASONING);
   const model = isValidModel(body?.model) ? body.model : settings.model;
   const reasoning = REASONING_LEVELS.some((r) => r.id === body?.reasoning)
     ? body.reasoning
     : settings.reasoning;
-  return { model, reasoning };
+  return { model, reasoning, concise: body?.concise === true };
 }
 
 // Toggle for the extra context added in chatHistory/ancestorHistory (the
